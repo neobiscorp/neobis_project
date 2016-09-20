@@ -4,6 +4,7 @@ include dirname ( __FILE__ ) . '\lib\Classes\PHPExcel.php';
 include dirname ( __FILE__ ) . '\lib\Classes\PHPExcel\IOFactory.php';
 include dirname ( __FILE__ ) . '\lib\lib.php';
 
+echo "<p align='center'><img  src='img/LOGONEOBISOK.jpeg' align='middle'></p>";
 //inicio de secion para paso de informacion necesaria
 session_start();
 

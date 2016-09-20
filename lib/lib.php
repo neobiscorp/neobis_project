@@ -1,5 +1,7 @@
 <?php
-// Letter definition for Excel filling
+/**
+ *  Letter definition for Excel filling
+ */
 function neobis_excel_letters() {
 	return $letras = array (
 			1 => 'A',
@@ -94,15 +96,32 @@ function neobis_insert_data_infobase(string $table, array $row_data){
 	  [value-7],[value-8],[value-9],[value-10],[value-11],[value-12],[value-13],[value-14],
 	  [value-15],[value-16],[value-17],[value-18],[value-19])";
 }
-function neobis_file_uploader_form(){
+function neobis_file_uploader_form($fechafact, $fechain, $fechafin, $proveedor, $cliente){
 	$output= "<html>";
 	$output .="<body>";
-	$output .= "<form method='POST' enctype='multipart/form-data' action='excelprocess.php'>";
+	$output .= "<form method='POST' enctype='multipart/form-data' action='index.php'>";
 	$output .= "<div align='center'>";
-	$output .= "<fieldset><legend> Seleccione un archivo para subir </legend>";
+	$output .= "<fieldset><legend align='center'> Seleccione un archivo para subir </legend>";
+	$output .= "<table align='center'>";
+	$output .= "<tr>";
+	$output .= "<td>Fecha de facturación: ".$fechafact."</td>";
+	$output .= "<td></td><td></td><td></td><td></td><td></td><td></td>";
+	$output .= "<td>Cliente: ".$cliente."</td>";
+	$output .= "</tr>";
+	$output .= "<tr>";
+	$output .= "<td>Fecha de inicio: ".$fechain."</td>";
+	$output .= "</tr>";
+	$output .= "<tr>";
+	$output .= "<td>Fecha de fin: ".$fechafin."</td>";
+	$output .= "<td></td><td></td><td></td><td></td><td></td><td></td>";
+	$output .= "<td>Proveedor: ".$proveedor."</td>";
+	$output .= "</tr>";
+	$output .= "</table>";
 	$output .= "<input type='hidden' name='MAX_FILE_SIZE' value='300000000' />";
 	$output .= "<p> Elegir Archivo: <input type='file' name='file'/></p>";
-	$output .= "<p> <input type='submit' name='submit' value='Importar'></p>";
+	$output .= neobis_boton("index.php", "Volver");
+	$output .= "<input type='submit' name='fichero' value='Volver'>";
+	$output .= "<input type='submit' name='fichero' value='Importar'>";
 	$output .= "</div></fieldset></form></body></html>";
 	return $output;
 }
@@ -136,7 +155,7 @@ function neobis_data_upload_ricoh($worksheet){
 		$modelo = $worksheet->getCellByColumnAndRow ( 22, $row )->getValue ();
 		
 		//DB connection
-		$connection = mysqli_connect('localhost', 'root', '', 'neobis');
+		$connection = mysqli_connect('localhost', 'root@localhost', '', 'neobis');
 		if (!$connection){
 			die("Connection Failed:".mysqli_connect_error());
 		}			
@@ -157,15 +176,15 @@ function neobis_data_upload_ricoh($worksheet){
 		}
 		
 		//Sql Query
-				$sql= "INSERT INTO
-				`falab_ricoh_imp`
-				(`dato`, `numserieuno`, `numseriedos`, `reempserie`, `cont_mono_antes`, `cont_mono_actual`, `cont_color_antes`, `cont_color_actual`, `uso_mono`, `uso_color`, `min_mono`, `min_color`, `costo_consumo_usd`, `costo_min_mono_usd`, `costo_min_color_usd`, `costo_total_usd`, `costo_total_clp`, `categoria`, `estado_info_adessa`, `negocio`, `obs_tecnico`, `prop_adessa`, `modelo`) 
-				VALUES 
-				('".$dato."', '".$numserieuno."', '".$numseriedos."', '".
-				$reempserie."', '".$cont_mono_antes."', '".$cont_mono_actual."', '".$cont_color_antes."', '".$cont_color_actual."', '".
-				$uso_mono."', '".$uso_color."', '".$min_mono."', '".$min_color."', '".$costo_consumo_usd."', '".
-				$costo_min_mono_usd."', '".$costo_min_color_usd."', '".$costo_total_usd."', '".$costo_total_clp."','".
-				$categoria."', '".$estado_info_adessa."', '".$negocio."', '".$obs_tecnico."', '".$prop_adessa."', '".$modelo."')";
+		$sql= "INSERT INTO
+			`falab_ricoh_imp`
+			(`dato`, `numserieuno`, `numseriedos`, `reempserie`, `cont_mono_antes`, `cont_mono_actual`, `cont_color_antes`, `cont_color_actual`, `uso_mono`, `uso_color`, `min_mono`, `min_color`, `costo_consumo_usd`, `costo_min_mono_usd`, `costo_min_color_usd`, `costo_total_usd`, `costo_total_clp`, `categoria`, `estado_info_adessa`, `negocio`, `obs_tecnico`, `prop_adessa`, `modelo`) 
+			VALUES 
+			('".$dato."', '".$numserieuno."', '".$numseriedos."', '".
+			$reempserie."', '".$cont_mono_antes."', '".$cont_mono_actual."', '".$cont_color_antes."', '".$cont_color_actual."', '".
+			$uso_mono."', '".$uso_color."', '".$min_mono."', '".$min_color."', '".$costo_consumo_usd."', '".
+			$costo_min_mono_usd."', '".$costo_min_color_usd."', '".$costo_total_usd."', '".$costo_total_clp."','".
+			$categoria."', '".$estado_info_adessa."', '".$negocio."', '".$obs_tecnico."', '".$prop_adessa."', '".$modelo."')";
 		
 		
 		//Send Information
@@ -184,20 +203,217 @@ function neobis_data_upload_ricoh($worksheet){
 	}
 }
 function neobis_select_provider_form(){
+	
+	// Conexion Base de Datos
+	$connection=neobis_mysql_conection();
+	//Busqueda de proveedores
+	$sql_proveedores = "SELECT nombre FROM proveedores";
+	$proveedores = mysqli_query($connection, $sql_proveedores);
+	$proveedor=array();
+	if (mysqli_num_rows($proveedores) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($proveedores)) {
+			$proveedor[]=$row["nombre"];
+		}
+	}
+	//Busqueda de Clientes
+	$sql_clientes = "SELECT nombre FROM clientes";
+	$clientes = mysqli_query($connection, $sql_clientes);
+	$cliente=array();
+	if (mysqli_num_rows($clientes) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($clientes)) {
+			$cliente[]=$row["nombre"];
+		}
+	}
+	
+	//Formulario
 	$output= "<html>";
 	$output .="<body>";
 	$output .= "<form method='POST'>";
-	$output .= "<fieldset><legend> Seleccione Poveedor </legend>";
+	$output .= "<fieldset><legend align='center'> Seleccione Poveedor </legend>";
 	$output .= "<div align='center'>";
-	$output .= "<p> Fecha de facturación:</p>";
-	$output .= "<p><input type='text' name='factdate' placeholder='Ej: 201608'></p>";
-	$output .= "<p> <select name='providers'></p>";
-	$output .= "<p> <option value='ricoh'>Ricoh</option></p>";
-	$output .= "<p> <option value='lexmark'>Lexmark</option></p>";
-	$output .= "<br><p> <input type='submit' name='enviar' value='Enviar'></p>";
+	$output .= "<link rel='stylesheet' type='text/css' href='tcal.css' />";
+	$output .= "<script type='text/javascript' src='tcal.js'></script>";
+	$output .= "Fecha de facturación:";
+	$output .= "<input type='text' name='indate' class='tcal' align='center'>";
+	$output .= "  Fecha de inicio del periodo de facturación:";
+	$output .= "<input type='text' name='findate' class='tcal' align='center'>";
+	$output .= "  Fecha de fin del periodo de facturación:";
+	$output .= "<input type='text' name='factdate' class='tcal' align='center'>";
+
+
+	//Select clientes
+	$output .= "<p> <select name='cliente'> </p>";
+	foreach ($cliente as $client){
+		$output .= "<p> <option value='".$client."'>".$client."</option></p>";
+	}
+	$output .= "</select>";
+	
+	//Select proveedores
+	$output .= "<select name='proveedor'>";
+	foreach ($proveedor as $prov){
+	$output .= "<p> <option value='".$prov."'>".$prov."</option></p>";
+	}
+	$output .= "</select>";
+	
+	
+	//Boton enviar
+	$output .= "<br><p> <input type='submit' name='fechas' value='Enviar'></p>";
 	$output .= "</div></fieldset></form></body></html>";
 	return $output;
 }
-function neobis_boton_volver(){
-	
+function neobis_boton($action,$value ){
+
+	$output = "<form method='POST' action='".$action."'>";
+	$output .= "<inpyt type='submit' name ='submit' value='".$value."'></form>";
+	return $output;
 }
+function neobis_mysql_conection(){
+	$connection = mysqli_connect('localhost', 'root', 'root', 'Neobis', '8889');
+	if (!$connection){
+		die("Connection Failed:".mysqli_connect_error());
+	}
+	return $connection;
+} 
+function neobis_extract_header($worksheet){
+	$count=0;
+	$header=array();
+	$highestCol = $worksheet->getHighestColumn();
+	$highestCol= array_search($highestCol, neobis_excel_letters());
+	for($col = 0; $col < $highestCol; $col ++) {
+		$header[] = $worksheet->getCellByColumnAndRow ( $col, 1)->getValue ();
+	}
+	return $header;	
+}
+function neobis_get_fields($cliente, $proveedor){
+	$connection = neobis_mysql_conection();
+	$sql= "SELECT campos.nombre, a.ce1, a.ce2, a.ce3, a.ce4, a.ce5
+			FROM campos,(SELECT campos_base.campos_id AS cid, d.ce1, d.ce2, d.ce3, d.ce4, d.ce5
+						FROM campos_base
+						JOIN(SELECT cliente_proveedor.tipo_proveedores_id AS tpid, cliente_proveedor.col_extra_1 AS ce1, cliente_proveedor.col_extra_2 AS ce2,
+							cliente_proveedor.col_extra_3 AS ce3, cliente_proveedor.col_extra_4 AS ce4, cliente_proveedor.col_extra_5 AS ce5
+							FROM cliente_proveedor
+							JOIN(SELECT proveedores.id as idproveedor, clientes.id as idcliente
+								FROM proveedores, clientes
+								WHERE proveedores.nombre LIKE '".$proveedor."' AND clientes.nombre LIKE '".$cliente."') AS s
+							ON s.idproveedor=cliente_proveedor.proveedores_id AND s.idcliente=cliente_proveedor.clientes_id) AS d
+						ON campos_base.tipo_proveedores_id=d.tpid) AS a
+			WHERE a.cid=campos.id";
+	
+	
+	$campos_sql=mysqli_query($connection, $sql);
+	return $campos_sql;
+}
+/**
+ * http://stackoverflow.com/questions/17714705/how-to-use-checkbox-inside-select-option
+ * @param unknown $header
+ * @param unknown $cliente
+ * @param unknown $proveedor
+ * @return string
+ */
+function neobis_select_fields($header, $campos_sql){
+	
+	$campos=array();
+	$extra=array();
+	if (mysqli_num_rows($campos_sql) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($campos_sql)) {
+			$campos[]=$row["nombre"];
+			$extra[0] = $row["ce1"];
+			$extra[1] = $row["ce2"];
+			$extra[2] = $row["ce3"];
+			$extra[3] = $row["ce4"];
+			$extra[4] = $row["ce5"];
+		}
+	}
+	
+	$encabezados = array();
+	$desplegable = array();
+	$output= "<html>";
+	
+	$output .="<body>";
+	$output .= "<form method='POST'>";
+	$output .= "<fieldset><legend align='center'> Selección de Campos </legend>";
+	$output .= "<div align='center'>";
+	$output .="<table style='overflow-x:scrol;' >";
+	$output .="<tr>";
+	
+	foreach($campos as $field){
+		$output .= "<th>".$field."</th>";
+	}
+	
+	$output .="</tr>";
+	$output .="<tr>";
+	foreach($campos as $field){
+		
+		$output .= "<td><select multiple='multiple' name='".$field."'>";
+		foreach($header as $title){
+			$output .= "<option  value='".$title."'>".$title."</option>";
+		}
+		$output .= "</select>";
+		$output .="</td>";
+	}
+	$output .="</tr>";
+	$output .="</table>";
+
+	
+	
+	
+	$output .="<input type='submit' name='table' value='Siguiente'>"; 
+	$output .= "</div></fieldset></form></body></html>";
+	return $output;
+}
+function neobis_get_multiple_select($campos_sql) {
+	$campos=array();
+	if (mysqli_num_rows ( $campos_sql ) > 0) {
+		// output data of each row
+		while ( $row = mysqli_fetch_assoc ( $campos_sql ) ) {
+			$campos [] = $row ["nombre"];
+			$extra [0] = $row ["ce1"];
+			$extra [1] = $row ["ce2"];
+			$extra [2] = $row ["ce3"];
+			$extra [3] = $row ["ce4"];
+			$extra [4] = $row ["ce5"];
+		}
+	}
+	$request=array();
+	foreach($campos as $campo){
+		foreach ($_POST[$campo] as $selection){
+			$request[$campo]=$_POST[$campo];
+		}
+	}
+	return $request;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
