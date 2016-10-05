@@ -1,4 +1,9 @@
 <?php
+
+use Box\Spout\Reader\ReaderFactory;
+use Box\Spout\Writer\WriterFactory;
+use Box\Spout\Writer\CSV;
+use Box\Spout\Common\Type;
 /**
  *  Letter definition for Excel filling
  */
@@ -236,11 +241,11 @@ function neobis_select_provider_form(){
 	$output .= "<link rel='stylesheet' type='text/css' href='tcal.css' />";
 	$output .= "<script type='text/javascript' src='tcal.js'></script>";
 	$output .= "Fecha de facturación:";
-	$output .= "<input type='text' name='indate' class='tcal' align='center'>";
-	$output .= "  Fecha de inicio del periodo de facturación:";
-	$output .= "<input type='text' name='findate' class='tcal' align='center'>";
-	$output .= "  Fecha de fin del periodo de facturación:";
 	$output .= "<input type='text' name='factdate' class='tcal' align='center'>";
+	$output .= "  Fecha de inicio del periodo de facturación:";
+	$output .= "<input type='text' name='indate' class='tcal' align='center'>";
+	$output .= "  Fecha de fin del periodo de facturación:";
+	$output .= "<input type='text' name='findate' class='tcal' align='center'>";
 
 
 	//Select clientes
@@ -277,7 +282,6 @@ function neobis_mysql_conection(){
 	return $connection;
 } 
 function neobis_extract_header($worksheet){
-	$count=0;
 	$header=array();
 	$highestCol = $worksheet->getHighestColumn();
 	$highestCol= array_search($highestCol, neobis_excel_letters());
@@ -385,21 +389,223 @@ function neobis_get_multiple_select($campos_sql) {
 	}
 	return $request;
 }
+function neobis_A2A($worksheet, $fechaUno, $fechaDos, $fecha, $cliente, $proveedor){
+	$info=array();
+	$highestCol = $worksheet->getHighestColumn();
+	var_dump($highestCol);die();
+	$highestCol= array_search($highestCol, neobis_excel_letters());
+	$highestRow = $worksheet->getHighestRow();
+	for($col = 0; $col < $highestCol; $col ++) {
+		if($worksheet->getCellByColumnAndRow ( $col, 1)->getValue () == "Tipo" ){
+			for ($i=0; $i<$highestRow;$i++){
+				$info["Tipo"][] = $worksheet->getCellByColumnAndRow ( $col, $i)->getValue ().".AD";
+			}
+		}elseif ($worksheet->getCellByColumnAndRow ( $col, 1)->getValue () == "Costo" ){
+			for ($i=0; $i<$highestRow;$i++){
+				$info["Costo"][] = $worksheet->getCellByColumnAndRow ( $col, $i)->getValue ();
+			}
+		}elseif ($worksheet->getCellByColumnAndRow ( $col, 1)->getValue () == "Serie" ){
+			for ($i=0; $i<$highestRow;$i++){
+				$info["Serie"][] = $worksheet->getCellByColumnAndRow ( $col, $i)->getValue ();
+			}
+		}
+	}
+	$connection=neobis_mysql_conection();
+	
+	$sql = "SELECT A.idoperateur, cliente_proveedor.proveedores_id as proveedorid, cliente_proveedor.clientes_id as clienteid, cliente_proveedor.ceco_id as cecoid, cliente_proveedor.nomcompte_id as nomcompteid, cliente_proveedor.codevice_id as codeviceid
+			FROM cliente_proveedor
+			JOIN(
+				SELECT proveedores.id as idproveedor, clientes.id as idcliente, proveedores.idoperateur
+				FROM proveedores, clientes
+				WHERE proveedores.nombre LIKE '".$proveedor."' AND clientes.nombre LIKE '".$cliente."') as A
+			ON A.idproveedor=cliente_proveedor.proveedores_id AND A.idcliente = cliente_proveedor.clientes_id ";
+	$ids = mysqli_query($connection, $sql);
+	
+	$id=array();
+	if (mysqli_num_rows($ids) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($ids)) {
+			$id["proveedorid"]=$row["proveedorid"];
+			$id["clienteid"] = $row["clienteid"];
+			$id["cecoid"] = $row["cecoid"];
+			$id["nomcompteid"] = $row["nomcompteid"];
+			$id["codeviceid"] = $row["codeviceid"];
+			$id["idoperateur"] = $row["idoperateur"];
+		}
+	}
+	$sql_ceco="SELECT nombre 
+				FROM ceco
+				WHERE id='".$id["cecoid"]."'";
+	$cecos=mysqli_query($connection, $sql_ceco);
+	if (mysqli_num_rows($cecos) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($cecos)) {
+			$ceco=$row["nombre"];
+		}
+	}
+	$sql_nomcompte="SELECT nombre 
+				FROM nomcompte
+				WHERE id='".$id["nomcompteid"]."'";
+	$nomcomptes=mysqli_query($connection, $sql_nomcompte);
+	if (mysqli_num_rows($nomcomptes) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($nomcomptes)) {
+			$nomcompte=$row["nombre"];
+		}
+	}
+	$sql_codevice="SELECT nombre 
+				FROM codevice
+				WHERE id='".$id["codeviceid"]."'";
+	$codevices=mysqli_query($connection, $sql_ceco);
+	if (mysqli_num_rows($codevices) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($codevices)) {
+			$codevice=$row["nombre"];
+		}
+	}
+	return $info;
+}
+function neobis_falabella_quintec_db_upload($filedir, $moisfacturation, $datefacture, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $proveedor ){
+	
+	//Mysql connection
+	$connection = neobis_mysql_conection();
+	
+	//Looking for max id
+	$maxid_sql = "SELECT MAX(id) AS maxid
+			FROM item";
+	$maxid = mysqli_query($connection, $maxid_sql);
+	$maxid = mysqli_fetch_array($maxid);
+	$maxid = $maxid['maxid'];
+	if($proveedor == 'Quintec-Arriendo'){
+	$facturename = "Falabella.PC-Arriendo-".$moisfacturation;
+	}elseif($proveedor == 'Quintec-Soporte'){
+		$facturename = "Falabella.PC-Soporte-".$moisfacturation;
+	}
+	$reader = ReaderFactory::create(Type::XLSX);
+	$reader->open($filedir);
+	
+	$delete_sql = "DELETE FROM item WHERE nofacture like '".$facturename."'";
+	mysqli_query($connection, $delete_sql);
+	$count = 0;
+	$i=0;
+	foreach ($reader->getSheetIterator() as $sheet) {
+		$sheetname=$sheet->getName();
+		if($sheetname ==="Base"){
+			foreach ($sheet->getRowIterator() as $row) {
+				if($i>7){
+					if($proveedor == 'Quintec-Arriendo'){
+						$montant_charge = $row[17] + $row[18];
+					}elseif($proveedor == 'Quintec-Soporte'){
+						$montant_charge = $row[19] + $row[20];
+					}
+					
+				//	$montant_charge = explode(".", $montant_charge);
+					//$montant_charge = implode(",", $montant_charge);
+					$insert = "INSERT INTO `item`(`moisfacturation`, `datefacturation`, `datefacture1`, `datefacture2`, `codedevise`, `idoperateur`, `nomcompte`, `centrefacturation`, `nofacture`, `noappel`, `libelle_charge`, `montant_charge`, `m_total`) 
+					VALUES ('".$moisfacturation."', '".$datefacture."', '".$dateone."', '".$datetwo."', '".$codedevise."', '".$idoperateur."', '".$nomcompte."', '".$ceco."', '".$facturename."', '".$row[11]."', '".$row[7]."', '".$montant_charge."', '".$montant_charge."')";
+					if(mysqli_query($connection, $insert)){
+						$count++;
+					} else {
+						$error=  "Error: " . $sql . "<br>" . mysqli_error($connection);
+					
+					}
+				}
+				$i++;
+			}  
+		}elseif($sheetname ==="Incorporaciones"){
+			$i=0;
+			foreach ($sheet->getRowIterator() as $row) {
+				if($i!=0){
+					
+					if($proveedor == 'Quintec-Arriendo'){
+						$montant_charge = $row[25] + $row[26];
+					}elseif($proveedor == 'Quintec-Soporte'){
+						$montant_charge = $row[27] + $row[28];
+					}
+					$insert = "INSERT INTO `item`(`moisfacturation`, `datefacturation`, `datefacture1`, `datefacture2`, `codedevise`, `idoperateur`, `nomcompte`, `centrefacturation`, `nofacture`, `noappel`, `libelle_charge`, `montant_charge`, `m_total`)
+					VALUES ('".$moisfacturation."', '".$datefacture."', '".$dateone."', '".$datetwo."', '".$codedevise."', '".$idoperateur."', '".$nomcompte."', '".$ceco."', '".$facturename."', '".$row[13]."', '".$row[8]."', '".$montant_charge."', '".$montant_charge."')";
+					if(mysqli_query($connection, $insert)){
+						$count++;
+					} else {
+						$error=  "Error: " . $sql . "<br>" . mysqli_error($connection);
+					
+					}	
+						
+				}
+				$i=99999;
+			}
+		}else{
+			break;		
+		}
+			
+	}
+	$reader->close();
+	if(isset($error)){
+		return $error;
+	}else{
+		return $facturename;
+	}
 
 
+}
+function neobis_quintec_csv($facturename, $header){
+	$connection = neobis_mysql_conection();
+	// Getting sum of the facture
+	$sum_sql="SELECT SUM(m_total) as Total
+			FROM item
+			WHERE nofacture LIKE '".$facturename."'";
+	$sum = mysqli_query($connection, $sum_sql);
+	$sum = mysqli_fetch_array($sum);
+	$sum = $sum['Total'];
+	$sum = round($sum, 4);
+	//getting sum with IVA
+	$sum_iva = $sum *1.19;
+	$sum_iva = round($sum_iva, 4);
+	//Getting separated IVA
+	$iva = $sum_iva - $sum;
+	$iva = round($iva, 4);
+	//changing decimal with period to decimal with colon	
+	$sum = explode(".", $sum);
+	$sum = implode(",", $sum);
+	$sum_iva = explode(".", $sum_iva);
+	$sum_iva = implode(",", $sum_iva);
+	$iva = explode(".", $iva);
+	$iva = implode(",", $iva);
+	
+	//Updating data on DB to export CSV
+	$update_sql = "UPDATE item
+			SET m_total_facture = '".$sum."', m_total_ttc_facture = '".$sum_iva."', m_tva = '".$iva."'
+			WHERE nofacture like '".$facturename."'";
+	
+	if(mysqli_query($connection, $update_sql)){
+		$count++;
+	} else {
+		$error=  "Error: " . $sql . "<br>" . mysqli_error($connection);
+			
+	}
 
-
-
-
-
-
-
-
-
-
-
-
-
+	//Getting information for importable CSV
+	$csv_sql = "SELECT moisfacturation, datefacturation, datefacture1, datefacture2, codedevise, idoperateur, nomcompte, centrefacturation, nofacture, m_total_facture, m_total_ttc_facture, noappel, libelle_charge, montant_charge, m_total, m_tva
+			FROM item
+			WHERE nofacture like '".$facturename."'";
+	
+	$csv = mysqli_query($connection, $csv_sql);
+	$import = array();
+	$count=1;
+	$import[0] = $header;
+	if (mysqli_num_rows($csv) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($csv)) {
+			
+			$row['montant_charge'] = explode(".", $row['montant_charge']);
+			$row['montant_charge'] = implode(",", $row['montant_charge']);
+			$row['m_total'] = $row['montant_charge'];
+			$import[$count]=$row;
+			$count++;
+		}
+	}
+	return $import;
+}
 
 
 
