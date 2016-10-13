@@ -1,122 +1,128 @@
 <?php
+// Setting time limit to 15 minutes
 set_time_limit(900);
 // Look for lib
 require_once dirname ( __FILE__ ) . '/lib/Classes/PHPExcel.php';
 require_once dirname ( __FILE__ ) . '/lib/Classes/PHPExcel/IOFactory.php';
 require_once dirname ( __FILE__ ) . '/lib/lib.php';
 require_once dirname ( __FILE__ ) . '/lib/spout-master/src/Spout/Autoloader/autoload.php';
+// Using the Excel library
 use Box\Spout\Reader\ReaderFactory;
 use Box\Spout\Writer\WriterFactory;
 use Box\Spout\Writer\CSV;
 use Box\Spout\Common\Type;
 
-//inicio de secion para paso de informacion a la siguiente pagina
+// Session start for passing variables throgh pages
 session_start();
 
-//Logo Neobis
+// Neobis Logo 
 echo "<p align='center'><img  src='img/LOGONEOBISOK.jpeg' align='middle'></p>";
+// Entering to the different views
+if($_POST["dates"] == "Enviar") {
+	// After client-suplier form 
+	// Filling in session variables, with the rescued information from the form.
+	$_SESSION["provider"]=$_POST ["provider"];
+	$_SESSION["factdate"]=$_POST ["factdate"];
+	$_SESSION["client"]=$_POST ["client"];
+	$_SESSION["indate"]=$_POST ["indate"];
+	$_SESSION["findate"]=$_POST ["findate"];
 
-if($_POST["fechas"] == "Enviar") {
-	//primer formulario llenado
-	
-	
-	
-
-	//llenado de informacion necesaria para la siguiente pagina
-	$_SESSION['proveedor']=$_POST ['proveedor'];
-	$_SESSION['factdate']=$_POST ['factdate'];
-	$_SESSION['cliente']=$_POST ['cliente'];
-	$_SESSION['indate']=$_POST ['indate'];
-	$_SESSION['findate']=$_POST ['findate'];
-
-	echo neobis_file_uploader_form($_SESSION['factdate'], $_SESSION['indate'], $_SESSION['findate'], $_SESSION['proveedor'], $_SESSION['cliente']);
+	// Showing the uploading form
+	echo neobis_file_uploader_form($_SESSION["factdate"], $_SESSION["indate"], $_SESSION["findate"], $_SESSION["provider"], $_SESSION["client"]);
 	die();
 }elseif($_POST["Volver"]){
+	
+	// Back from the uploading form to the selection of client-provider
 	echo neobis_select_provider_form();
 	die();
-}elseif($_POST["fichero"]=="Importar"){
+}elseif($_POST["file"]=="Importar"){
 	
-	if (!$_FILES ['file'] ['name']){
-	
+	// After saving the file in the system we show a table to validate the work of the program
+	// Cheking file is not missing
+	if (!$_FILES ["file"] ["name"]){
 		die("No hay archivo, vuelva a intentar");
 	}
-	//die("archivo cargado correctamente");
 	
+	// Cheking if there was a facture name input
+	if(isset($_POST['namefacture'])){
+		// If there was a facture name, assign it to a session variable
+		$_SESSION['facturename']= $_POST['facture'];
+	}
 	
-	
-	
-	$filename = explode ( "_", $_FILES ['file'] ['name'] );
-	
-		//collecting data for file
+		// Collecting data for file
+		// Creating connection variable for queries
 		$connection = neobis_mysql_conection();
 		
-		//get idoperateur
-		$idoperateur_sql= "SELECT idoperateur FROM proveedores WHERE nombre LIKE '".$_SESSION['proveedor']."'";
+		// Getting idoperateur
+		$idoperateur_sql= "SELECT idoperateur FROM proveedores WHERE nombre LIKE '".$_SESSION["provider"]."'";
+		// Execcuting query
 		$idoperateur = mysqli_query($connection, $idoperateur_sql);
+		// Getting query results
 		$idoperateur=mysqli_fetch_array($idoperateur);
-		$idoperateur = $idoperateur['idoperateur'];
-		//get ceco, nomcompte, codevice id
+		// Assign idoperateur to session variable
+		$_SESSION["idoperateur"]= $idoperateur["idoperateur"];
+		
+		// Getting ceco, nomcompte, codevice id
 		$info_sql = "SELECT ceco_id, nomcompte_id, codedevise_id
 					 FROM cliente_proveedor
 					 JOIN (
    						 SELECT clientes.id AS clienteid, proveedores.id AS proveedorid
   						 FROM clientes, proveedores
-   						 WHERE clientes.nombre LIKE '".$_SESSION['cliente']."' AND proveedores.nombre LIKE '".$_SESSION['proveedor']."') AS a
+   						 WHERE clientes.nombre LIKE '".$_SESSION["client"]."' AND proveedores.nombre LIKE '".$_SESSION["provider"]."') AS a
 					 ON proveedores_id = a.proveedorid AND clientes_id = a.clienteid";
 		$info = mysqli_query($connection, $info_sql);;
 		$info = mysqli_fetch_array($info);
 		
-		//get CECO
-		$ceco_sql = "SELECT nombre FROM ceco WHERE id='".$info['ceco_id']."'";
+		// Getting CECO
+		$ceco_sql = "SELECT nombre FROM ceco WHERE id='".$info["ceco_id"]."'";
 		$ceco = mysqli_query($connection, $ceco_sql);
 		$ceco = mysqli_fetch_array($ceco);
-		$ceco = $ceco['nombre'];
-		// get nomcompte
-		$nomcompte_sql = "SELECT nombre FROM nomcompte WHERE id='".$info['nomcompte_id']."'";
+		$_SESSION["ceco"]=$ceco["nombre"];
+		
+		// Getting nomcompte
+		$nomcompte_sql = "SELECT nombre FROM nomcompte WHERE id='".$info["nomcompte_id"]."'";
 		$nomcompte = mysqli_query($connection, $nomcompte_sql);
 		$nomcompte = mysqli_fetch_array($nomcompte);
-		$nomcompte = $nomcompte['nombre'];
-		//get codevice
-		$codedevise_sql="SELECT nombre FROM codedevise WHERE id='".$info['codedevise_id']."'";
+		$_SESSION["nomcompte"]=$nomcompte["nombre"];
+		
+		// Getting codevice
+		$codedevise_sql="SELECT nombre FROM codedevise WHERE id='".$info["codedevise_id"]."'";
 		$codedevise = mysqli_query($connection, $codedevise_sql);
 		$codedevise = mysqli_fetch_array($codedevise);
-		$codedevise = $codedevise['nombre'];
-		//fecha de facturacion
-		$facturationdate = $_SESSION['factdate'];
-		$facturationdate = explode("-", $facturationdate);
-		$facturationdate = $facturationdate[2]."/".$facturationdate[1]."/".$facturationdate[0]; 
+		$_SESSION["codedevise"]=$codedevise["nombre"];
 		
-		//fecha de inicio de periodo de facturacion
-		$dateone= $_SESSION['indate'];
+		// Getting facturation date
+		$facturationdate = $_SESSION["factdate"];
+		// Separating date by "-"
+		$facturationdate = explode("-", $facturationdate);
+		// Joining date array with "/"
+		$facturationdate = $facturationdate[2]."/".$facturationdate[1]."/".$facturationdate[0]; 
+		// Assigning the facturation date to a session variable
+		$_SESSION["facturationdate"]=$facturationdate;
+		
+		// Getting facturation period start date
+		$dateone= $_SESSION["indate"];
 		$dateone=explode("-", $dateone);
 		$dateone=$dateone[2]."/".$dateone[1]."/".$dateone[0];
-
-		//fecha de termino e periodo de facturacion
-		$datetwo= $_SESSION['findate'];
+		$_SESSION["dateone"]=$dateone;
+		
+		// Getting facturation period finish date
+		$datetwo= $_SESSION["findate"];
 		$datetwo=explode("-", $datetwo);
 		$datetwo=$datetwo[2]."/".$datetwo[1]."/".$datetwo[0];
+		$_SESSION["datetwo"]=$datetwo;
 		
-		//mes de facturacion
-		$moisfacturation = $_SESSION['factdate'];
+		// Facturation month
+		$moisfacturation = $_SESSION["factdate"];
 		$moisfacturation = explode("-", $moisfacturation);
 		$moisfacturation = $moisfacturation[2].$moisfacturation[1];
-		
-		$filename = explode ( ".", $_FILES ['file'] ['name'] );
-		
-		//file destination
-		$base_filedir= dirname(__FILE__).'/uploads';
-		$filedir = $base_filedir."/".$_FILES['file']['name'] ;
-		
-		//datos
-		$totalfactura=0;
-		$filas=array();
-		$factdata = array();
+		$_SESSION["moisfacturation"]= $moisfacturation;
 		
 		// load file
-		if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
+		/*if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
 			
-			$fields=neobis_get_fields($_SESSION['cliente'], $_SESSION['proveedor']);
-			$_SESSION["campos"]=$fields;
+			$fields=neobis_get_fields($_SESSION["client"], $_SESSION["provider"]);
+			$_SESSION['fields']=$fields;
 			$campos=array();
 			$extra=array();
 			if (mysqli_num_rows($fields) > 0) {
@@ -138,14 +144,14 @@ if($_POST["fechas"] == "Enviar") {
 			//Proceso de factuas para demo de quintec
 			if($filename [0]== "Quintec"){
 				//ingresar funcion de procesado de factura de quintec para prueba
-				$facturename = neobis_falabella_quintec_db_upload($filedir, $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $_SESSION['proveedor']);
+				$facturename = neobis_falabella_quintec_db_upload($filedir, $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $_SESSION["provider"]);
 				$data = neobis_quintec_csv($facturename, $factdata[0]);
 				
 				$writer= WriterFactory::create(Type::CSV);
 				$writer->setFieldDelimiter(';');
-				if($_SESSION['proveedor'] == 'Quinte-Arriendo'){
+				if($_SESSION["provider"] == 'Quinte-Arriendo'){
 					$writer->openToFile( dirname(__FILE__)."/uploads/QuintecArriendo.csv");
-				}elseif($_SESSION['proveedor']=='Quintec-Soporte'){
+				}elseif($_SESSION["provider"]=='Quintec-Soporte'){
 					$writer->openToFile(dirname(__FILE__)."/uploads/QuintecSoporte.csv");
 				}
 				$writer->addRows($data);
@@ -170,7 +176,7 @@ if($_POST["fechas"] == "Enviar") {
 					foreach ($sheet->getRowIterator() as $row) {
 						if($i!=0){
 							$insert = "INSERT INTO `item`(`moisfacturation`, `datefacturation`, `datefacture1`, `datefacture2`, `codedevise`, `idoperateur`, `nomcompte`, `centrefacturation`, `nofacture`, `noappel`, `libelle_charge`, `montant_charge`, `m_total`) 
-								VALUES ('".$moisfacturation."', '".$facturationdate."', '".$dateone."', '".$datetwo."', '".$codedevise."', '".$idoperateur."', '".$nomcompte."', '".$ceco."', '".$facturename."', '".$row[7]."', '".$row[3]."Ad', '".$row[9]."', '".$row[9]."')";
+								VALUES ('".$moisfacturation."', '".$facturationdate."', '".$dateone."', '".$datetwo."', '".$codedevise."', '".$idoperateur."', '".$nomcompte."', '".$ceco."', '".$facturename."', '".$row[7]."', '".$row[3].".Ad', '".$row[9]."', '".$row[9]."')";
 							if(mysqli_query($connection, $insert)){
 								$j++;
 							}
@@ -190,15 +196,6 @@ if($_POST["fechas"] == "Enviar") {
 			$import = neobis_quintec_csv($facturename, $factdata[0]);
 			
 			
-		/*	$montant_charge = explode(".", $row[9]);
-			$montant_charge = implode(",", $montant_charge);
-			$factdata[$count] = array($moisfacturation,$facturationdate, $dateone, $datetwo, $codedevise, $idoperateur, $nomcompte, $ceco, "Falabella.Ad.PC-".$moisfacturation, "16571,66", "19720,2754", $row[7],  $row[3].".AD", $montant_charge, $montant_charge, "3148,0646" );
-			$count++;*/
-			
-			
-			
-			
-			
 			$reader->close();
 			$writer= WriterFactory::create(Type::CSV);
 			$writer->setFieldDelimiter(';');
@@ -209,56 +206,88 @@ if($_POST["fechas"] == "Enviar") {
 			
 			
 			die("A2A Creado!");
-			// selección de hoja está hecho para un archivo en específico.
-			var_dump(neobis_A2A($sheet, $_SESSION["indate"], $_SESSION["findate"], $_SESSION["factdate"], $_SESSION["cliente"], $_SESSION["proveedor"]));
 		
-		
-	}
+	}*/
 	
+	// Getting file name separated 
+	$filename = explode ( ".", $_FILES ["file"] ["name"] );
 	
-	
-	
-	
-	
-	
-	
-	// validacion del nombre
-	$filename = explode ( ".", $_FILES ['file'] ['name'] );
-	
+	// Validating extention
 	if ($filename [1] == "csv" || $filename [1] == "xls" || $filename [1] == "xlsx") {
 		
-		//file destination
-		$base_filedir= dirname(__FILE__).'\uploads';
-		$filedir = $base_filedir."\\".$_FILES['file']['name'] ;
+		// File destination
+		$base_filedir= dirname(__FILE__)."/uploads";
+		$filedir = $base_filedir."/".$_FILES ["file"] ["name"] ;
+		$_SESSION["filedir"] = $filedir;
 		
-		// load file
-		if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
+		// Loading file
+		if(move_uploaded_file($_FILES["file"]["tmp_name"], $filedir)){
+			$sheetcount=0;
+			$rowcount=0;
 			
-			$objExcel = PHPExcel_IOFactory::load($filedir);
+			// File reader creation
+			$reader = ReaderFactory::create(Type::XLSX);
 			
-			// selección de hoja está hecho para un archivo en específico.
-			$worksheet=$objExcel->getSheet(0);
-		
-			$header=neobis_extract_header($worksheet);
-			$fields=neobis_get_fields($_SESSION['cliente'], $_SESSION['proveedor']);
-			$_SESSION["campos"]=$fields;
-
-			echo neobis_select_fields($header, $fields);
+			// Getting file to read
+			$reader->open($filedir);
+			
+			// Reading file sheet by sheet
+			foreach($reader->getSheetIterator() as $sheet){
+				// Counting sheets
+				$sheetcount ++;
+			}
+			foreach ( $reader->getSheetIterator () as $sheet ) {
+				// Getting sheet name
+				$sheetname = $sheet->getName ();
+				foreach ( $sheet->getRowIterator () as $row ) {
+					// Reading only the first row
+					if ($rowcount < 1) {	
+						// Condition to change name of row to identify sheet 
+						if ($sheetcount > 1) {
+							// Counting number of columns
+							$length = count ( $row );
+							// Going through the columns changing the 
+							for($i = 0; $i < $length; $i ++) {
+								// Changing value to match Sheet - Vaue
+								$row [$i] = $sheetname . " - " . $row [$i];
+							}
+						}
+						// Asign header to a session variable 
+						$_SESSION["header"] = $row;
+						$rowcount ++;
+					} else {
+						break;
+					}
+				}
+			}	
+			
+			// Closing file reader
+			$reader->close();	
+			
+			// Getting fields that match client-provider
+			$_SESSION["fields"]=neobis_get_fields($_SESSION["client"], $_SESSION["provider"]);
+			
+			// Select field form display
+			echo neobis_select_fields($_SESSION["header"], $_SESSION["fields"]);
 			die();
 		}else{
+			// Loading the file error
 			echo "Error en la carga del archivo";
 			die();
 		}
 	}
+}elseif($_POST["fields"]=="Siguiente"){
+
+	// Showing table section
+	// Getting things from previous form
+	$selections = $_POST;
 	
-}elseif($_POST["table"]=="Siguiente"){
-	
-	
-	$fields=neobis_get_fields($_SESSION['cliente'], $_SESSION['proveedor']);
-	var_dump(neobis_get_multiple_select($fields));
+	// Printing table for validation
+	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $selections, $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
 	die("en construcción");
 }
 
+// showing client-provider selection form
 echo neobis_select_provider_form();
 
 die ();
