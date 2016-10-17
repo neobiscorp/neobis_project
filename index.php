@@ -263,10 +263,8 @@ if($_POST["dates"] == "Enviar") {
 			
 			// Closing file reader
 			$reader->close();	
-			
 			// Getting fields that match client-provider
 			$_SESSION["fields"]=neobis_get_fields($_SESSION["client"], $_SESSION["provider"]);
-			
 			// Select field form display
 			echo neobis_select_fields($_SESSION["header"], $_SESSION["fields"]);
 			die();
@@ -277,7 +275,6 @@ if($_POST["dates"] == "Enviar") {
 		}
 	}
 }elseif($_POST["fields"]=="Siguiente"){
-
 	// Showing table section
 	// Getting things from previous form
 	$selections = $_POST;

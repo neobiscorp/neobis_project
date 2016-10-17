@@ -150,7 +150,7 @@ function neobis_mysql_conection(){
  * @param string $proveedor
  * @return Query excecution
  */
-function neobis_get_fields($cliente, $proveedor){
+function neobis_get_fields($client, $provider){
 	// Star connection
 	$connection = neobis_mysql_conection();
 	// Sql sentence 
@@ -162,23 +162,13 @@ function neobis_get_fields($cliente, $proveedor){
 							FROM cliente_proveedor
 							JOIN(SELECT proveedores.id as idproveedor, clientes.id as idcliente
 								FROM proveedores, clientes
-								WHERE proveedores.nombre LIKE '".$proveedor."' AND clientes.nombre LIKE '".$cliente."') AS s
+								WHERE proveedores.nombre LIKE '".$provider."' AND clientes.nombre LIKE '".$client."') AS s
 							ON s.idproveedor=cliente_proveedor.proveedores_id AND s.idcliente=cliente_proveedor.clientes_id) AS d
 						ON campos_base.tipo_proveedores_id=d.tpid) AS a
 			WHERE a.cid=campos.id";
 	
 	// Query excecution
 	$campos_sql=mysqli_query($connection, $sql);
-	return $campos_sql;
-}
-/**
- * Selecting fields forms, assign file columns to standard fields
- * @param array $header
- * @param array $cliente
- * @param array $proveedor
- * @return Form
- */
-function neobis_select_fields($header, $campos_sql){	
 	$campos=array();
 	$extra=array();
 	// Going through query results
@@ -217,6 +207,16 @@ function neobis_select_fields($header, $campos_sql){
 			$campos[$newlength] = $extra[$i];
 		}
 	}
+	return $campos;
+}
+/**
+ * Selecting fields forms, assign file columns to standard fields
+ * @param array $header
+ * @param array $cliente
+ * @param array $proveedor
+ * @return Form
+ */
+function neobis_select_fields($header, $campos){	
 	
 	// Starting form
 	$output= "<html>";
@@ -490,7 +490,7 @@ function neobis_quintec_csv($facturename, $header){
  * @param unknown $codedevise
  * @return string
  */
-function neobis_print_table($client, $provider, $filedir, $header, $selections, $fields,  $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise){
+function neobis_print_table($client, $provider, $filedir, $header, $selections, $campos,  $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise){
 	// Creating connection
 	$connection = neobis_mysql_conection();
 	// Creating file reader
@@ -498,16 +498,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	// Opening file
 	$reader->open($filedir);
 	$assoc=array();
-	$campos = array();
-	// Going through results
-	if (mysqli_num_rows($fields) > 0) {
-		// Output data of each row
-		while($row = mysqli_fetch_assoc($fields)) {
-			// Saving results
-			$campos[]=$row["nombre"];
-			
-		}
-	}
 	// Going through fields
 	foreach($campos as $campo){
 		// Sees if the field is set
@@ -516,7 +506,8 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 			$assoc[$campo] = array_search($selections[$campo], $header);
 		}
 	}
-	// Checking for a factune name if it don't exist it assigns one
+	
+	// Checking for a facture name if it don't exist it assigns one
 	if(isset($_SESSION['facturename'])){
 		$facturename=$_SESSION['facturename'];
 	}else{
@@ -529,22 +520,79 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	// Going through file sheets
 	foreach($reader->getSheetIterator() as $sheet){
 		// Setting a counter
-		$i=0;
+		$header_out=0;
+		$count_row=0;
 		// Going through rows from sheet
 		foreach ($sheet->getRowIterator() as $row){
-			if($i!=0){
-				 // Insert query
-				$insert = "INSERT INTO `item`(`moisfacturation`, `datefacturation`, `datefacture1`, `datefacture2`, `codedevise`, `idoperateur`, `nomcompte`, `centrefacturation`, `nofacture`, `noappel`, `libelle_charge`, `montant_charge`, `m_total`)
-								VALUES ('".$moisfacturation."', '".$facturationdate."', '".$dateone."', '".$datetwo."', '".$codedevise."', '".$idoperateur."', '".$nomcompte."', '".$ceco."', '".$facturename."', '".$row[$assoc["noappel"]]."', '".$row[$assoc["libelle_charge"]].".Ad', '".$row[$assoc["montant_charge"]]."', '".$row[$assoc["m_total"]]."')";
-				// Query excecution
-				if(mysqli_query($connection, $insert)){
-					$j++;
+			if($header_out != 0){
+				// Going through fields
+				foreach($campos as $campo){
+					// Sees if the field is set
+					if(isset($assoc[$campo])){
+						// Create new array associating field with possition on the array
+						if($campo == "libelle_charge"){
+							$file[$count_row][$campo] = $row[$assoc[$campo]].".AD";
+						}else{
+							$file[$count_row][$campo] = $row[$assoc[$campo]];
+						}
+					}
 				}
-					
+				$count_row++;
 			}
-			$i=99999;
+			$header_out=99999;
 		}
 	}
+	
+	
+	
+	// Clearing data base query creation
+	$delete_sql = "DELETE FROM item WHERE nofacture like '".$facturename."'";
+	// Query excecution
+	mysqli_query($connection, $delete_sql);
+	
+	
+	
+	// Creating array with insert values
+	$insert_values=array();
+	// Row counter to fill in array
+	$count_row = 0;
+	// Going through file rows
+	foreach ($file as $row){
+		// merging arrays
+		$insert_values[$count_row] = array_merge(neobis_insertinto_values( $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise), $row);
+		// adding last field
+		$insert_values[$count_row]["nofacture"] = $facturename;
+		// Adding to counter
+		$count_row++;
+	}
+	
+	$insert_fields= neobis_insertinto_fields();
+	for($i = 0 ; $i <= count($insert_values); $i++){
+		$sql_insert = "INSERT INTO `item` (";
+		$sql_values = "VALUES (";
+		for($j = 0; $j <= count($insert_fields); $j++){
+			
+			if(isset($insert_values[$i][$insert_fields[$j]])){
+				if($j != "0"){
+					$sql_insert .= ",";
+					$sql_values .= ",";
+				}
+				$sql_insert .= " `".$insert_fields[$j]."`";
+				$sql_values .= " '".$insert_values[$i][$insert_fields[$j]]."'";
+			
+			}else{
+				continue;
+			}
+		}
+		$sql_insert .= ")";
+		$sql_values .= ")";
+		//var_dump($sql_insert." ".$sql_values);die();
+		mysqli_query($connection, $sql_insert." ".$sql_values);
+	}
+
+	
+	
+	
 	// Getting total facture value from data base
 	$sum_sql="SELECT SUM(m_total) as Total
 			FROM item
@@ -588,8 +636,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	$table = mysqli_query($connection, $table_sql);
 	$table_show = array();
 	$count=1;
-	$encabezados=array("moisfacturation", "datefaturation", "datefacture1", "datefacture2", "codedevise", "idoperateur", "nomcompte", "centrefacturation", "nofacture", "m_total_facture", "m_total_ttc_facture", "noappel", "libelle_charge", "montant_charge", "m_total", "m_tva");
-	//var_dump($encabezados);die();
+	$encabezados=array("moisfacturation", "datefacturation", "datefacture1", "datefacture2", "codedevise", "idoperateur", "nomcompte", "centrefacturation", "nofacture", "m_total_facture", "m_total_ttc_facture", "noappel", "libelle_charge", "montant_charge", "m_total", "m_tva");
 	if (mysqli_num_rows($table) > 0) {
 		// output data of each row
 		while($row = mysqli_fetch_assoc($table)) {
@@ -619,11 +666,54 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 		$show .= "</tr>";
 	}
 	$show .= "</table></html>";
+	$sql_comma_select="SELECT * FROM 'item' WHERE nofacture LIKE'".$facturename."'";
+	$comma_select = mysqli_query($connection, $sql_comma_select);
+	
+	
+	/*if (mysqli_num_rows($comma_select) > 0) {
+		// output data of each row, saving results
+		while($row = mysqli_fetch_assoc($comma_select)) {
+			if($row[])
+			mysqli_query($connection, "UPDATE 'item' SET")
+		}
+	}*/
+	
 	return $show;
 	
 }
-
-
+function neobis_insertinto_fields(){
+	// Data base connection
+	$connection = neobis_mysql_conection();
+	// Crating array
+	$fields = array();
+	// SQL to get all posible fields
+	$fields_sql = "SELECT * FROM campos";
+	// Query excecution
+	$result = mysqli_query($connection, $fields_sql);
+	// Getting results
+	if (mysqli_num_rows($result) > 0) {
+		// output data of each row
+		while($row = mysqli_fetch_assoc($result)) {
+			$fields[] = $row['nombre'];
+		}
+	}
+	$array = array("moisfacturation", "datefacturation", "datefacture1", "datefacture2", "codedevise", "idoperateur", "nomcompte", "centrefacturation", "m_tva");
+	$fields = array_merge( $array, $fields);
+	return $fields;
+}
+function neobis_insertinto_values( $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise){
+	$array = array(
+			"moisfacturation" => $moisfacturation,
+			"datefacturation" => $facturationdate,
+			"datefacture1" => $dateone,
+			"datefacture2" => $datetwo,
+			"idoperateur" => $idoperateur,
+			"nomcompte" => $nomcompte,
+			"centrefacturation" => $ceco,
+			"codedevise" => $codedevise
+	);
+	return $array;
+}
 
 
 
