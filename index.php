@@ -18,29 +18,63 @@ session_start();
 // Neobis Logo 
 echo "<p align='center'><img  src='img/LOGONEOBISOK.jpeg' align='middle'></p>";
 // Entering to the different views
-if($_POST["dates"] == "Enviar") {
+if($_POST["dates"] == "Enviar" ) {
+	$result=array();
+	// Checking if dates are allready set
+	if (! isset ( $_SESSION ["factdate"] ) || ! isset ( $_SESSION ["indate"] ) || ! isset ( $_SESSION ["findate"] )) {
+		// Checking if there is any date missing
+		if (! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["indate"], $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["findate"], $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["factdate"], $result )) {
+			echo "<p align = 'center'>No se seleccionaron las fechas requeridas</p>";
+			echo "<html><body><div align = 'center'><form method='POST'><input type='submit' name='Volver' value='Volver'></div></form></body></html>";
+			die ();
+		}
+	}
 	// After client-suplier form 
-	// Filling in session variables, with the rescued information from the form.
-	$_SESSION["provider"]=$_POST ["provider"];
-	$_SESSION["factdate"]=$_POST ["factdate"];
-	$_SESSION["client"]=$_POST ["client"];
-	$_SESSION["indate"]=$_POST ["indate"];
-	$_SESSION["findate"]=$_POST ["findate"];
-
+	// Checking if dates are allready set
+	if (! isset ( $_SESSION ["factdate"] ) || ! isset ( $_SESSION ["indate"] ) || ! isset ( $_SESSION ["findate"] )) {
+		// Filling in session variables, with the rescued information from the form.
+		$_SESSION ["provider"] = $_POST ["provider"];
+		$_SESSION ["factdate"] = $_POST ["factdate"];
+		$_SESSION ["client"] = $_POST ["client"];
+		$_SESSION ["indate"] = $_POST ["indate"];
+		$_SESSION ["findate"] = $_POST ["findate"];
+	}
 	// Showing the uploading form
 	echo neobis_file_uploader_form($_SESSION["factdate"], $_SESSION["indate"], $_SESSION["findate"], $_SESSION["provider"], $_SESSION["client"]);
 	die();
-}elseif($_POST["Volver"]){
-	
+}elseif($_POST["Volver"] == "Volver"){
 	// Back from the uploading form to the selection of client-provider
 	echo neobis_select_provider_form();
 	die();
-}elseif($_POST["file"]=="Importar"){
-	
+}elseif($_POST["file"] == "Importar"){
 	// After saving the file in the system we show a table to validate the work of the program
 	// Cheking file is not missing
-	if (!$_FILES ["file"] ["name"]){
-		die("No hay archivo, vuelva a intentar");
+	if (! isset ( $_SESSION ["filename"] )) {
+		if (! $_FILES ["file"] ["name"]) {
+			
+			echo "<p align = 'center'>No hay archivo, vuelva a intentar</p>";
+			echo "<html><body><div align = 'center'><form method='POST'><input type='submit' name='dates' value='Enviar'></div></form></body></html>";
+			
+			die ();
+		}
+	}
+	// Cheking if there is any file name saved before
+	if (! isset ( $_SESSION ["filename"] )) {
+		// Assigns file name to SESSION variable
+		$_SESSION["filename"] = $_FILES ["file"] ["name"];
+	}
+	// File destination
+	$base_filedir= dirname(__FILE__)."/uploads";
+	$filedir = $base_filedir."/".$_FILES ["file"] ["name"] ;
+	// Checking if there is any file directory saved before
+	if(!isset($_SESSION["filedir"])){
+		$_SESSION["filedir"] = $filedir;
+	}
+	// Uploading file
+	if(move_uploaded_file($_FILES["file"]["tmp_name"], $filedir)){
+		$upload = TRUE;
+	}else{
+		$upload = FALSE;
 	}
 	
 	// Cheking if there was a facture name input
@@ -48,11 +82,9 @@ if($_POST["dates"] == "Enviar") {
 		// If there was a facture name, assign it to a session variable
 		$_SESSION['facturename']= $_POST['facture'];
 	}
-	
 		// Collecting data for file
 		// Creating connection variable for queries
 		$connection = neobis_mysql_conection();
-		
 		// Getting idoperateur
 		$idoperateur_sql= "SELECT idoperateur FROM proveedores WHERE nombre LIKE '".$_SESSION["provider"]."'";
 		// Execcuting query
@@ -61,7 +93,6 @@ if($_POST["dates"] == "Enviar") {
 		$idoperateur=mysqli_fetch_array($idoperateur);
 		// Assign idoperateur to session variable
 		$_SESSION["idoperateur"]= $idoperateur["idoperateur"];
-		
 		// Getting ceco, nomcompte, codevice id
 		$info_sql = "SELECT ceco_id, nomcompte_id, codedevise_id
 					 FROM cliente_proveedor
@@ -210,27 +241,18 @@ if($_POST["dates"] == "Enviar") {
 	}*/
 	
 	// Getting file name separated 
-	$filename = explode ( ".", $_FILES ["file"] ["name"] );
-	
+	$filename = explode ( ".", $_SESSION["filename"]);
 	// Validating extention
 	if ($filename [1] == "csv" || $filename [1] == "xls" || $filename [1] == "xlsx") {
-		
-		// File destination
-		$base_filedir= dirname(__FILE__)."/uploads";
-		$filedir = $base_filedir."/".$_FILES ["file"] ["name"] ;
-		$_SESSION["filedir"] = $filedir;
-		
+
 		// Loading file
-		if(move_uploaded_file($_FILES["file"]["tmp_name"], $filedir)){
+		if($upload = TRUE){
 			$sheetcount=0;
 			$rowcount=0;
-			
 			// File reader creation
 			$reader = ReaderFactory::create(Type::XLSX);
-			
 			// Getting file to read
-			$reader->open($filedir);
-			
+			$reader->open($_SESSION["filedir"]);
 			// Reading file sheet by sheet
 			foreach($reader->getSheetIterator() as $sheet){
 				// Counting sheets
@@ -260,7 +282,6 @@ if($_POST["dates"] == "Enviar") {
 					}
 				}
 			}	
-			
 			// Closing file reader
 			$reader->close();	
 			// Getting fields that match client-provider
@@ -274,14 +295,31 @@ if($_POST["dates"] == "Enviar") {
 			die();
 		}
 	}
+	die();
 }elseif($_POST["fields"]=="Siguiente"){
 	// Showing table section
 	// Getting things from previous form
 	$selections = $_POST;
-	
+	// Checking if there are selections saved
+	if(!isset($_SESSION["selections"])){
+		$_SESSION["selections"] = $_POST;
+	}
 	// Printing table for validation
-	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $selections, $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
-	die("en construcción");
+	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $_SESSION["selections"], $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
+	echo neobis_back_fromtable();
+	if($_POST["download"] == "TRUE" ){
+		$csv = neobis_create_file_information($_SESSION["facturename"]);
+		$writer= WriterFactory::create(Type::CSV);
+		$writer->setFieldDelimiter(';');
+		$writer->openToFile( dirname ( __FILE__ ) ."/uploads/".$_SESSION["facturename"].".csv");
+		$writer->addRows($csv);
+		$writer->close();
+		$backbutton = "<html><body><div align = 'center'><form method='POST'>";
+		$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";
+		$backbutton .= "</div></form></body></html>";
+		echo $backbutton;
+	}
+	die();
 }
 
 // showing client-provider selection form
