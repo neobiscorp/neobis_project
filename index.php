@@ -65,7 +65,7 @@ if($_POST["dates"] == "Enviar" ) {
 	}
 	// File destination
 	$base_filedir= dirname(__FILE__)."/uploads";
-	$filedir = $base_filedir."/".$_FILES ["file"] ["name"] ;
+	$filedir = $base_filedir."/".$_SESSION["filename"] ;
 	// Checking if there is any file directory saved before
 	if(!isset($_SESSION["filedir"])){
 		$_SESSION["filedir"] = $filedir;
@@ -76,7 +76,6 @@ if($_POST["dates"] == "Enviar" ) {
 	}else{
 		$upload = FALSE;
 	}
-	
 	// Cheking if there was a facture name input
 	if(isset($_POST['namefacture'])){
 		// If there was a facture name, assign it to a session variable
@@ -148,7 +147,6 @@ if($_POST["dates"] == "Enviar" ) {
 		$moisfacturation = explode("-", $moisfacturation);
 		$moisfacturation = $moisfacturation[2].$moisfacturation[1];
 		$_SESSION["moisfacturation"]= $moisfacturation;
-		
 		// load file
 		/*if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
 			
@@ -244,7 +242,6 @@ if($_POST["dates"] == "Enviar" ) {
 	$filename = explode ( ".", $_SESSION["filename"]);
 	// Validating extention
 	if ($filename [1] == "csv" || $filename [1] == "xls" || $filename [1] == "xlsx") {
-
 		// Loading file
 		if($upload = TRUE){
 			$sheetcount=0;

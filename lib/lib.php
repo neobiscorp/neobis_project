@@ -826,7 +826,7 @@ function neobis_back_fromtable(){
 }
 function neobis_create_file_information($facturename){
 	$connection = neobis_mysql_conection();
-	$prueba = mysqli_query($connection, "Select * FROM item WHERE nofacture LIKE 'hola'");
+	$prueba = mysqli_query($connection, "Select * FROM item WHERE nofacture LIKE '".$facturename."'");
 	$pos = 1;
 	if (mysqli_num_rows($prueba) > 0) {
 		// output data of each row
