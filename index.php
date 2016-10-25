@@ -78,8 +78,9 @@ if($_POST["dates"] == "Enviar" ) {
 	}
 	// Cheking if there was a facture name input
 	if(isset($_POST['namefacture'])){
+		$aux=explode(" ", $_SESSION["provider"]);
 		// If there was a facture name, assign it to a session variable
-		$_SESSION['facturename']= $_POST['facture'];
+		$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
 	}
 		// Collecting data for file
 		// Creating connection variable for queries
@@ -303,19 +304,19 @@ if($_POST["dates"] == "Enviar" ) {
 	}
 	// Printing table for validation
 	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $_SESSION["selections"], $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
-	echo neobis_back_fromtable();
-	if($_POST["download"] == "TRUE" ){
-		$csv = neobis_create_file_information($_SESSION["facturename"]);
-		$writer= WriterFactory::create(Type::CSV);
-		$writer->setFieldDelimiter(';');
-		$writer->openToFile( dirname ( __FILE__ ) ."/uploads/".$_SESSION["facturename"].".csv");
-		$writer->addRows($csv);
-		$writer->close();
-		$backbutton = "<html><body><div align = 'center'><form method='POST'>";
-		$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";
-		$backbutton .= "</div></form></body></html>";
-		echo $backbutton;
-	}
+	
+
+	$csv = neobis_create_file_information($_SESSION["facturename"]);
+	$writer= WriterFactory::create(Type::CSV);
+	$writer->openToFile( dirname ( __FILE__ ) ."/downloads/".$_SESSION["facturename"].".csv");
+	$writer->setFieldDelimiter(';');
+	$writer->addRows($csv);
+	$writer->close();
+	echo neobis_back_fromtable($_SESSION["facturename"], dirname(__FILE__)."/uploads/");
+	$backbutton = "<html><body><div align = 'center'><form method='POST' action = 'index.php'>";
+	$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";
+	$backbutton .= "</div></form></body></html>";
+	echo $backbutton;
 	die();
 }
 

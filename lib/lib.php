@@ -608,6 +608,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 					$sql_insert .= ",";
 					$sql_values .= ",";
 				}
+				
 				// Inserting fields and values
 				$sql_insert .= " `".$insert_fields[$j]."`";
 				$sql_values .= " '".$insert_values[$i][$insert_fields[$j]]."'";
@@ -619,12 +620,10 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 		// Closing parenthesis
 		$sql_insert .= ")";
 		$sql_values .= ")";
-		//var_dump($sql_insert." ".$sql_values);die();
 		// Uploading to data base
 		mysqli_query($connection, $sql_insert." ".$sql_values);
 	}
 
-	
 	
 	
 	// Getting total facture value from data base
@@ -692,7 +691,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	$show .= "</tr>";
 	// writing content on table
 	foreach($table_show as $line){
-		
 		$show .= "<tr>";
 		//var_dump($cell);
 		foreach($line as $cell){
@@ -814,13 +812,12 @@ function neobis_upload_colon_replacement($row, $connection){
 	}
 	
 }
-function neobis_back_fromtable(){
-	$output = "<html><body><div align = 'center'><form method='POST'>";
+function neobis_back_fromtable($facturename, $dir){
+	$output = "<html><body><div align = 'center'><form method='POST' action='index.php'>";
 	$output .= "<button type='submit' name='dates' value='Enviar'>Me equivoqué de archivo</button>";
 	$output .= "<button type='submit' name='file' value='Importar'>Volver a elegir campos</button>";
-	$output .= "<button type='submit' name='fields' value='Siguiente'>Descargar</button>";
-	$output .= "<input type='hidden' name='download' value='TRUE' />";
-	$output .= "</div></form></body></html>";
+	$output .= "</form>";
+	$output .= "<a href='download.php'><img src='img/Boton_arreglado.jpeg'></a>";
 	return $output;
 	
 }
@@ -848,8 +845,18 @@ function neobis_create_file_information($facturename){
 	$csv[0] = array_diff($csv[0], ["id"]);
 	return $csv;
 }
-
-
+function neobis_show_file($facturename){
+	$csv = neobis_create_file_information($facturename);
+	$writer= WriterFactory::create(Type::CSV);
+	$writer->setFieldDelimiter(';');
+	$writer->openToFile( dirname ( __FILE__ ) ."/uploads/".$_SESSION["facturename"].".csv");
+	$writer->addRows($csv);
+	$writer->close();
+	$backbutton = "<html><body><div align = 'center'><form method='POST'>";
+	$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";
+	$backbutton .= "</div></form></body></html>";
+	echo $backbutton;
+}
 
 
 
