@@ -76,12 +76,7 @@ if($_POST["dates"] == "Enviar" ) {
 	}else{
 		$upload = FALSE;
 	}
-	// Cheking if there was a facture name input
-	if(isset($_POST['namefacture'])){
-		$aux=explode(" ", $_SESSION["provider"]);
-		// If there was a facture name, assign it to a session variable
-		$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
-	}
+	
 		// Collecting data for file
 		// Creating connection variable for queries
 		$connection = neobis_mysql_conection();
@@ -148,6 +143,15 @@ if($_POST["dates"] == "Enviar" ) {
 		$moisfacturation = explode("-", $moisfacturation);
 		$moisfacturation = $moisfacturation[2].$moisfacturation[1];
 		$_SESSION["moisfacturation"]= $moisfacturation;
+		// Cheking if there was a facture name input
+		if(isset($_POST['namefacture'])){
+			$aux=explode(" ", $_SESSION["provider"]);
+			// If there was a facture name, assign it to a session variable
+			$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
+		}
+		
+		
+		
 		// load file
 		/*if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
 			
@@ -304,15 +308,21 @@ if($_POST["dates"] == "Enviar" ) {
 	}
 	// Printing table for validation
 	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $_SESSION["selections"], $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
-	
-
+	// Creating file variable
 	$csv = neobis_create_file_information($_SESSION["facturename"]);
+	// Create CSV writer
 	$writer= WriterFactory::create(Type::CSV);
+	// Saing file to this direction, name included
 	$writer->openToFile( dirname ( __FILE__ ) ."/downloads/".$_SESSION["facturename"].".csv");
+	// Setting delimiter
 	$writer->setFieldDelimiter(';');
+	// Adding information to file
 	$writer->addRows($csv);
+	// Closing writer
 	$writer->close();
+	// Adding buttons
 	echo neobis_back_fromtable($_SESSION["facturename"], dirname(__FILE__)."/uploads/");
+	// New button to going back to the begining
 	$backbutton = "<html><body><div align = 'center'><form method='POST' action = 'index.php'>";
 	$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";
 	$backbutton .= "</div></form></body></html>";
