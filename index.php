@@ -310,6 +310,7 @@ if($_POST["dates"] == "Enviar" ) {
 	echo neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $_SESSION["selections"], $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
 	// Creating file variable
 	$csv = neobis_create_file_information($_SESSION["facturename"]);
+	//var_dump($_SESSION["facturename"]);die();
 	// Create CSV writer
 	$writer= WriterFactory::create(Type::CSV);
 	// Saing file to this direction, name included

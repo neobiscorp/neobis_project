@@ -16,6 +16,6 @@ header('Content-Disposition: attachment; filename='.$filename);
 header("Content-Type: text/csv");
 header("Content-Length:". filesize(dirname(__FILE__)."/downloads/".$filename));
 // reading file 
-readfile(dirname(__FILE__)."/downloads/".$filename);
+readfile(dirname(__FILE__)."/downloads/".$_SESSION["facturename"].".csv");
 
 die();
