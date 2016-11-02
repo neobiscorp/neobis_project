@@ -14,7 +14,7 @@ foreach ($filenames as $part){
 // Headers to download file
 header('Content-Disposition: attachment; filename='.$filename);
 header("Content-Type: text/csv");
-header("Content-Length:". filesize(dirname(__FILE__)."/downloads/".$filename));
+header("Content-Length:". filesize(dirname(__FILE__)."/downloads/".$_SESSION["facturename"].".csv"));
 // reading file 
 readfile(dirname(__FILE__)."/downloads/".$_SESSION["facturename"].".csv");
 
