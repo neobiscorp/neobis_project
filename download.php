@@ -1,6 +1,6 @@
 <?php
 // Setting time limit to 15 minutes
-set_time_limit(900);
+set_time_limit(2100);
 // Session start for passing variables throgh pages
 session_start();
 // File name with extension

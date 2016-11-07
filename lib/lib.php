@@ -684,7 +684,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	// Closing table
 	$show .= "</table></html>";
 	// Return table
-	return $show;
+	return array($show, $encabezados);
 	
 }
 /**
@@ -832,44 +832,32 @@ function neobis_back_fromtable($facturename, $dir){
  * @param string $facturename
  * @return array
  */
-function neobis_create_file_information($facturename){
+function neobis_create_file_information($facturename, $headers){
 	// Connetcing to te data base
 	$connection = neobis_mysql_conection();
 	// Creating and excecuting query
-	$prueba = mysqli_query($connection, "Select * FROM item WHERE nofacture LIKE '".$facturename."'");
+	$first = 0;
+	$query = "SELECT ";
+	foreach($headers as $header){
+		if($first != 0){
+			$query .=", ";
+			
+		}
+		$query .= $header;
+		$first = 9999;
+	}
+	$query.= " FROM item WHERE nofacture LIKE '".$facturename."'";
+	$prueba = mysqli_query($connection, $query );
 	$pos = 1;
+	$csv[0] = $headers;
 	// Going through query result
 	if (mysqli_num_rows($prueba) > 0) {
 		// output data of each row
 		while($row = mysqli_fetch_assoc($prueba)) {
-			// Serching for header
-			if (! isset ( $csv[0] )) {
-				// Going through cells
-				foreach ( $row as $cell ) {
-					if ($cell != NULL) {
-						// Creating header
-						$csv[0] [] = array_search ( $cell, $row );
-					}
-				}
-			}
-			// Taking NULL fields
-			$row = array_diff($row, [NULL]);
-			// Taking the id field, not used in file
-			unset($row["id"]);
 			// inserting row to file variable
 			$csv[$pos] = $row;
 			$pos++;
-			
 		}
 	}
-	// Taking id from header
-	$csv[0] = array_diff($csv[0], ["id"]);
 	return $csv;
 }
-
-
-
-
-
-
-
