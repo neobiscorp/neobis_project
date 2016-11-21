@@ -532,7 +532,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 			$assoc[$campo] = array_search($selections[$campo], $header);
 		}
 	}
-	
 	// Checking for a facture name if it don't exist it assigns one
 	if(isset($_SESSION["facturename"])){
 		$facturename=$_SESSION["facturename"];
@@ -665,7 +664,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	$count=1;
 	
 	// Starting table
-	$show = "<html><table border = '1'>";
+	$show = "<html><table border = '1' align = 'center'>";
 	$show .= "<tr>";
 	// Writing header in table
 	foreach ($encabezados as $encabezado){
@@ -823,7 +822,8 @@ function neobis_back_fromtable($facturename, $dir){
 	$output .= "<button type='submit' name='dates' value='Enviar'>Me equivoqué de archivo</button>";
 	$output .= "<button type='submit' name='file' value='Importar'>Volver a elegir campos</button>";
 	$output .= "</form>";
-	$output .= "<a href='download.php'><img src='img/Boton_arreglado.jpeg'></a>";
+	$output .= "<div align = 'center'><form method='POST' action='download.php'>";
+	$output .="<button type='submit' value='Enviar'>Descargar</button>";
 	return $output;
 	
 }
