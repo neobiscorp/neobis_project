@@ -237,12 +237,7 @@ function neobis_select_fields($header, $campos){
 	$output .="<table style='overflow-x:scrol;' >";
 	$output .="<tr>";
 	
-	
 	$connection = neobis_mysql_conection();
-	
-	
-	
-	
 	
 	// Creating tittle row
 	foreach($campos as $field){
@@ -263,7 +258,8 @@ function neobis_select_fields($header, $campos){
 	// Creating multiple selection form
 	foreach($campos as $field){
 		
-		$output .= "<td><select multiple='multiple' name='".$field."'>";
+		$output .= "<td><select name='".$field."'>";
+		$output .= " <option value = 'noselection'>-- select an option --</option>";
 		foreach($header as $title){
 			$output .= "<option  value='".$title."'>".$title."</option>";
 		}
@@ -860,4 +856,94 @@ function neobis_create_file_information($facturename, $headers){
 		}
 	}
 	return $csv;
+}
+/**
+ * Checking for date errors
+ * @param string $factdate
+ * @param string $indate
+ * @param string $findate
+ * @return multitype:boolean string
+ */
+function neobis_date_error($factdate, $indate, $findate){
+	// Error creation
+	$error = "<div align = 'center'><h1>Error/es:</h1>";
+	// boolean for die() creation
+	 $boolean = FALSE;
+	$result=array();
+	// Checking if there is any date missing
+	if (! preg_match ( "/(.*)-(.*)-(.*)/", $indate, $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $findate, $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $factdate, $result )) {
+		$error .= "<br> No se seleccionaron las fechas requeridas";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	// Date sepatration for comparisson
+	$factdate = explode("-", $factdate);
+	$indate = explode("-", $indate);
+	$findate = explode("-", $findate);
+
+	// Date inconsistance comparisson
+	if($factdate[2] < $indate[2] || $factdate[2] < $findate[2]){
+		$error .= "<br>El año de facturación es menor al año del periodo de facturación ";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	if($factdate[1] < $indate[1] || $factdate[1] < $findate[1]){
+		$error .= "<br>El mes de facturación es menor al mes del periodo de facturación ";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	if(mktime(0,0,0,$factdate[0], $factdate[1], $factdate[2]) > mktime(0,0,0,$indate[0], $indate[1], $indate[2]) && mktime(0,0,0,$factdate[0], $factdate[1], $factdate[2]) < mktime(0,0,0,$findate[0], $findate[1], $findate[2])){
+		$error .= "<br>La fecha de facturación está dentro del periodo de facturación";	
+		$boolean = TRUE;
+	}
+	if($indate[2] != $findate[2]){
+		$error .= "<br>El año de inicio de periodo es diferente al año de fin periodo de facturación ";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	if($indate[1] > $findate[1]){
+		$error .= "<br>El mes de inicio de periodo es mayor al mes de fin periodo de facturación ";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	if($indate[0] > $findate[0] && $indate[2] == $findate[2] && $indate[3] == $findate[3]){
+		$error .= "<br>El día de inicio de periodo es mayor al día de fin periodo de facturación ";
+		// boolean for die() creation
+		$boolean = TRUE;
+	}
+	
+	$error .= "<br><br><form method='POST'><input type='submit' name='Volver' value='Volver'></form>";
+	$error .= "</div>";
+	return array($boolean, $error);
+}
+/**
+ * Checking if the relationship of client and provider selected exists
+ * @param string $client
+ * @param string $provider
+ */
+function neobis_client_provider_existance($client, $provider){
+	$connection = neobis_mysql_conection();
+	$clientid_sql = "SELECT id 
+			FROM clientes
+			WHERE nombre like '".$client."'";
+	$providerid_sql = "SELECT id 
+			FROM proveedores
+			WHERE nombre like '".$provider."'";
+	
+	$result = mysqli_query($connection, $clientid_sql); 
+	$clientid = mysqli_fetch_assoc($result);
+	
+	$result= mysqli_query($connection, $providerid_sql);
+	$providerid = mysqli_fetch_assoc($result);
+	$existance_sql = "SELECT id
+			FROM cliente_proveedor
+			WHERE proveedores_id = '".$providerid["id"]."' AND clientes_id = '".$clientid["id"]."'";
+	
+	$result = mysqli_query($connection, $existance_sql);
+	$existance = mysqli_fetch_array($result);
+	if($existance == NULL){
+		return array($existance, "<div align = 'center'><h1>Error:</h1><br>La combinación de Cliente y Proveedor no existe<br><br><form method='POST'><input type='submit' name='Volver' value='Volver'></form>");
+	}else{
+		return array($existance, "No hay Error");
+	}
 }

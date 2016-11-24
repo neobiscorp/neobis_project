@@ -19,17 +19,7 @@ session_start();
 echo "<p align='center'><img  src='img/LOGONEOBISOK.jpeg' align='middle'></p>";
 // Entering to the different views
 if($_POST["dates"] == "Enviar" ) {
-	$result=array();
-	// Checking if dates are allready set
-	if (! isset ( $_SESSION ["factdate"] ) || ! isset ( $_SESSION ["indate"] ) || ! isset ( $_SESSION ["findate"] )) {
-		// Checking if there is any date missing
-		if (! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["indate"], $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["findate"], $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $_POST ["factdate"], $result )) {
-			echo "<p align = 'center'>No se seleccionaron las fechas requeridas</p>";
-			echo "<html><body><div align = 'center'><form method='POST'><input type='submit' name='Volver' value='Volver'></div></form></body></html>";
-			die ();
-		}
-	}
-	// After client-suplier form 
+	
 	// Checking if dates are allready set
 	if (! isset ( $_SESSION ["factdate"] ) || ! isset ( $_SESSION ["indate"] ) || ! isset ( $_SESSION ["findate"] )) {
 		// Filling in session variables, with the rescued information from the form.
@@ -38,7 +28,21 @@ if($_POST["dates"] == "Enviar" ) {
 		$_SESSION ["client"] = $_POST ["client"];
 		$_SESSION ["indate"] = $_POST ["indate"];
 		$_SESSION ["findate"] = $_POST ["findate"];
+	}	
+	// Checking for errors
+	list($boolean, $error) = neobis_date_error($_SESSION ["factdate"], $_SESSION ["indate"], $_SESSION ["findate"]);
+	if($boolean){
+		echo $error;
+		die();
 	}
+	list($clientprovider, $error) = neobis_client_provider_existance($_SESSION ["client"], $_SESSION ["provider"]);
+	if($clientprovider == NULL){
+		echo $error;
+		die();
+	}
+	
+	// Comming back from other pages
+	unset($_SESSION ["filename"]);
 	// Showing the uploading form
 	echo neobis_file_uploader_form($_SESSION["factdate"], $_SESSION["indate"], $_SESSION["findate"], $_SESSION["provider"], $_SESSION["client"]);
 	die();
@@ -52,8 +56,8 @@ if($_POST["dates"] == "Enviar" ) {
 	if (! isset ( $_SESSION ["filename"] )) {
 		if (! $_FILES ["file"] ["name"]) {
 			
-			echo "<p align = 'center'>No hay archivo, vuelva a intentar</p>";
-			echo "<html><body><div align = 'center'><form method='POST'><input type='submit' name='dates' value='Enviar'></div></form></body></html>";
+			echo "<p align = 'center'><h1>Error/es:</h1><br>No hay archivo, vuelva a intentar</p>";
+			echo "<html><body><div align = 'center'><form method='POST'><button type='submit' name='dates' value='Enviar'>Volver</button></div></form></body></html>";
 			
 			die ();
 		}
@@ -62,6 +66,11 @@ if($_POST["dates"] == "Enviar" ) {
 	if (! isset ( $_SESSION ["filename"] )) {
 		// Assigns file name to SESSION variable
 		$_SESSION["filename"] = $_FILES ["file"] ["name"];
+	}
+	$extention = explode(".",$_SESSION["filename"]);
+	if($extention[1] != "xlsx" && $extention[1] != "xls"){
+		echo "<div align = 'center'>El archivo no puede ser leido, usar archivo '.xlsx' <form method='POST'><button type='submit' name='dates' value='Enviar'>Volver</button></div></form>";
+		die();
 	}
 	// File destination
 	$base_filedir= dirname(__FILE__)."/uploads";
@@ -143,14 +152,20 @@ if($_POST["dates"] == "Enviar" ) {
 		$moisfacturation = explode("-", $moisfacturation);
 		$moisfacturation = $moisfacturation[2].$moisfacturation[1];
 		$_SESSION["moisfacturation"]= $moisfacturation;
+		
 		// Cheking if there was a facture name input
+		$result=array();
 		if(isset($_POST['namefacture'])){
-			$aux=explode(" ", $_SESSION["provider"]);
-			// If there was a facture name, assign it to a session variable
-			$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
+			if(  preg_match ( "/[[:alnum:]]/", $_POST['facture'], $result )){
+				$aux=explode(" ", $_SESSION["provider"]);
+				// If there was a facture name, assign it to a session variable
+				$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
+			}else{
+				echo "<div align = 'center'><h1>Error:</h1><br>No seleccionaste un nombre de factura </div>";
+				echo "<html><body><div align = 'center'><form method='POST'><button type='submit' name='dates' value='Enviar'>Volver</button></div></form></body></html>";
+				die ();
+			}
 		}
-		
-		
 		
 		// load file
 		/*if(move_uploaded_file($_FILES['file']['tmp_name'], $filedir)){
@@ -302,6 +317,13 @@ if($_POST["dates"] == "Enviar" ) {
 	// Showing table section
 	// Getting things from previous form
 	$selections = $_POST;
+	foreach($selections as $selection){
+		if($selection == "noselection"){
+			echo "<div align = 'center'><h1>Error:</h1><br>No seleccionaste uno de los campos </div>";
+				echo "<html><body><div align = 'center'><form method='POST'><button type='submit' name='file' value='Importar'>Volver</button></div></form></body></html>";
+				die ();
+		}
+	}
 	// Checking if there are selections saved
 	if(!isset($_SESSION["selections"])){
 		$_SESSION["selections"] = $_POST;
