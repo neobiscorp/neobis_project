@@ -335,7 +335,6 @@ if($_POST["dates"] == "Enviar" ) {
 	
 	// Creating file variable
 	$csv = neobis_create_file_information($_SESSION["facturename"], $encabezados);
-	//var_dump($csv);die();
 	// Create CSV writer
 	$writer= WriterFactory::create(Type::CSV);
 	// Saing file to this direction, name included

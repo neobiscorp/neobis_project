@@ -46,11 +46,35 @@ function neobis_file_uploader_form($fechafact, $fechain, $fechafin, $provider, $
 	
 	// Unsetting facture name for coming back purpouse
 	unset($_SESSION["facturename"]);
+	?>
+		<script>
+	function showFacture(str) {
+	  if (str=='') {
+	    document.getElementById('txtHint').innerHTML='';
+	    return;
+	  }
+	  if (window.XMLHttpRequest) {
+	    // code for IE7+, Firefox, Chrome, Opera, Safari
+	    xmlhttp=new XMLHttpRequest();
+	  } else { // code for IE6, IE5
+	    xmlhttp=new ActiveXObject('Microsoft.XMLHTTP');
+	  }
+	  xmlhttp.onreadystatechange=function() {
+	    if (this.readyState==4 && this.status==200) {
+	      document.getElementById('txtHint').innerHTML=this.responseText;
+	    }
+	  }
+	  xmlhttp.open('GET','facturename.php?q='+str,true);
+	  xmlhttp.send();
+	}
+	</script>
+		<?php 
 	
 	// Checkbox for facture name 
-	$output .= "<p> <input type = 'checkbox' name = 'namefacture' value = '1'> Seleccionar nombre de la factura </p>";
-	// Text input por facture name
-	$output .= "<p>Nombre de la factura:<input type = 'text' name = 'facture'></p>";
+	$output .= "<p> <input type = 'checkbox' name = 'namefacture' value = '1' onchange='showFacture(this.value)'> Seleccionar nombre de la factura </p>";
+	// Getting information by JS over previous Checkbox
+	$output .= "<div id='txtHint'></div>";
+	
 	// Back button
 	$output .= "<input type='submit' name='Volver' value='Volver'>";
 	// Import button
@@ -101,6 +125,30 @@ function neobis_select_provider_form(){
 	// Form creation
 	$output= "<html>";
 	$output .="<body>";
+	?>
+	<script>
+function showProvider(str) {
+  if (str=='') {
+    document.getElementById('txtHint').innerHTML='';
+    return;
+  }
+  if (window.XMLHttpRequest) {
+    // code for IE7+, Firefox, Chrome, Opera, Safari
+    xmlhttp=new XMLHttpRequest();
+  } else { // code for IE6, IE5
+    xmlhttp=new ActiveXObject('Microsoft.XMLHTTP');
+  }
+  xmlhttp.onreadystatechange=function() {
+    if (this.readyState==4 && this.status==200) {
+      document.getElementById('txtHint').innerHTML=this.responseText;
+    }
+  }
+  xmlhttp.open('GET','selectprovider.php?q='+str,true);
+  xmlhttp.send();
+}
+</script>
+	<?php 
+
 	$output .= "<form method='POST'>";
 	// Setting form title
 	$output .= "<fieldset><legend align='center'> Seleccione Poveedor </legend>";
@@ -120,20 +168,15 @@ function neobis_select_provider_form(){
 
 
 	// Client selection
-	$output .= "<p> <select name='client'> </p>";
+	$output .= "<p> <select name='client' onchange='showProvider(this.value)'> </p>";
+	$output .= " <option value = 'noselection'>-- select an option --</option>";
 	foreach ($cliente as $client){
 		$output .= "<p> <option value='".$client."'>".$client."</option></p>";
 	}
 	$output .= "</select>";
-	
-	// Provider selection
-	$output .= "<select name='provider'>";
-	foreach ($proveedor as $prov){
-	$output .= "<p> <option value='".$prov."'>".$prov."</option></p>";
-	}
-	$output .= "</select>";
-	
-	
+	// Getting information by JS over previous Select
+	$output .= "<div id = 'txtHint'></div>";
+
 	// Submit Button
 	$output .= "<br><p> <input type='submit' name='dates' value='Enviar'></p>";
 	$output .= "</div></fieldset></form></body></html>";
