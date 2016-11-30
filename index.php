@@ -314,22 +314,31 @@ if($_POST["dates"] == "Enviar" ) {
 	}
 	die();
 }elseif($_POST["fields"]=="Siguiente"){
+	
+
+	// Checking if there are selections saved
+	if(!isset($_SESSION["selections"])){
+		$_SESSION["selections"] = $_POST;
+	}
+	/*echo "<p align='center'><img  src='img/loading.gif' align='middle'></p>";
+	
+	//arreglar para que mande el $_POST por URL
+	echo "<script type='text/javascript'>
+          window.location = 'http://localhost:8888/Neobis/prueba.php'
+    	  </script>";
+	die();*/
 	// Showing table section
-	// Getting things from previous form
-	$selections = $_POST;
-	foreach($selections as $selection){
+	foreach($_POST as $selection){
 		if($selection == "noselection"){
 			echo "<div align = 'center'><h1>Error:</h1><br>No seleccionaste uno de los campos </div>";
 				echo "<html><body><div align = 'center'><form method='POST'><button type='submit' name='file' value='Importar'>Volver</button></div></form></body></html>";
 				die ();
 		}
 	}
-	// Checking if there are selections saved
-	if(!isset($_SESSION["selections"])){
-		$_SESSION["selections"] = $_POST;
-	}
+	echo neobis_back_fromtable($_SESSION["facturename"], dirname(__FILE__)."/uploads/");
+	
 	// Getting table and file header
-	list($print, $encabezados) = neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $selections, $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
+	list($print, $encabezados) = neobis_print_table($_SESSION["client"], $_SESSION["provider"],  $_SESSION["filedir"], $_SESSION["header"], $_SESSION['selections'], $_SESSION["fields"],  $_SESSION["moisfacturation"], $_SESSION["facturationdate"], $_SESSION["dateone"], $_SESSION["datetwo"], $_SESSION["idoperateur"], $_SESSION["nomcompte"], $_SESSION["ceco"], $_SESSION["codedevise"]);
 	// Printing table for validation
 	echo $print;
 	
@@ -347,6 +356,7 @@ if($_POST["dates"] == "Enviar" ) {
 	$writer->close();
 	// Adding buttons
 	echo neobis_back_fromtable($_SESSION["facturename"], dirname(__FILE__)."/uploads/");
+
 	// New button to going back to the begining
 	$backbutton = "<html><body><div align = 'center'><form method='POST' action = 'index.php'>";
 	$backbutton .= "<button type='submit' name='back' value='back'>Volver al inicio</button>";

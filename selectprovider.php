@@ -33,8 +33,4 @@ foreach ($provider as $prov){
 	$output .= "<p> <option value='".$prov."'>".$prov."</option></p>";
 }
 $output .= "</select>";
-/*
-// Submit Button
-$output .= "<br><p> <input type='submit' name='dates' value='Enviar'></p>";
-$output .= "</div></fieldset></form></body></html>";*/
 echo $output;

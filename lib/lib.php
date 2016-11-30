@@ -156,15 +156,15 @@ function showProvider(str) {
 	// Getting CSS
 	$output .= "<link rel='stylesheet' type='text/css' href='tcal.css' />";
 	$output .= "<script type='text/javascript' src='tcal.js'></script>";
-	$output .= "Fecha de facturación:";
+	$output .= "<br>Fecha de facturación:";
 	// Inserting Calendar
-	$output .= "<input type='text' name='factdate' class='tcal' align='center'>";
+	$output .= "<input type='text' name='factdate' class='tcal' align='center'><br><br>";
 	$output .= "  Fecha de inicio del periodo de facturación:";
 	// Inserting Calendar
 	$output .= "<input type='text' name='indate' class='tcal' align='center'>";
 	$output .= "  Fecha de fin del periodo de facturación:";
 	// Inserting Calendar
-	$output .= "<input type='text' name='findate' class='tcal' align='center'>";
+	$output .= "<input type='text' name='findate' class='tcal' align='center'><br>";
 
 
 	// Client selection
@@ -178,7 +178,7 @@ function showProvider(str) {
 	$output .= "<div id = 'txtHint'></div>";
 
 	// Submit Button
-	$output .= "<br><p> <input type='submit' name='dates' value='Enviar'></p>";
+	$output .= "<p> <input type='submit' name='dates' value='Enviar'></p>";
 	$output .= "</div></fieldset></form></body></html>";
 	return $output;
 }
@@ -312,12 +312,11 @@ function neobis_select_fields($header, $campos){
 	$output .="</tr>";
 	$output .="</table>";
 
-	
-	
 	// Submit button
 	$output .="<input type='submit' name='fields' value='Siguiente'>"; 
-	$output .= "</div></fieldset></form></body></html>";
+	$output .= "</div><div id= 'txtHint' ></div></fieldset></form></body></html>";
 	return $output;
+	die();
 }
 // Not Used
 function neobis_A2A($worksheet, $fechaUno, $fechaDos, $fecha, $cliente, $proveedor){
@@ -603,7 +602,10 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 					if(isset($assoc[$campo])){
 						// Create new array associating field with possition on the array
 						if($campo == "libelle_charge"){
-							$file[$campo] = $row[$assoc[$campo]].".AD";
+							// Hardcode for this stage
+							if($client == "Falabella" && $provider == "Adessa PC"){
+								$file[$campo] = $row[$assoc[$campo]].".AD";
+							}
 						}else{
 							$file[$campo] = $row[$assoc[$campo]];
 						}
@@ -861,8 +863,9 @@ function neobis_back_fromtable($facturename, $dir){
 	$output .= "<button type='submit' name='dates' value='Enviar'>Me equivoqué de archivo</button>";
 	$output .= "<button type='submit' name='file' value='Importar'>Volver a elegir campos</button>";
 	$output .= "</form>";
-	$output .= "<div align = 'center'><form method='POST' action='download.php'>";
-	$output .="<button type='submit' value='Enviar'>Descargar</button>";
+	// Download Button
+	$output .= "<div align = 'center'><form method='POST'  action='download.php'>";
+	$output .="<button type='submit' value='Enviar'>Descargar</button></form>";
 	return $output;
 	
 }
@@ -915,9 +918,11 @@ function neobis_date_error($factdate, $indate, $findate){
 	$result=array();
 	// Checking if there is any date missing
 	if (! preg_match ( "/(.*)-(.*)-(.*)/", $indate, $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $findate, $result ) || ! preg_match ( "/(.*)-(.*)-(.*)/", $factdate, $result )) {
-		$error .= "<br> No se seleccionaron las fechas requeridas";
+		$error .= "<br> No se seleccionaron las fechas requeridas.";
 		// boolean for die() creation
 		$boolean = TRUE;
+	}elseif($indate == $findate){
+		$error .= "<br> Fecha de inicio de periodo es igual a la fecha de fin de periodo.";
 	}
 	// Date sepatration for comparisson
 	$factdate = explode("-", $factdate);
@@ -926,31 +931,31 @@ function neobis_date_error($factdate, $indate, $findate){
 
 	// Date inconsistance comparisson
 	if($factdate[2] < $indate[2] || $factdate[2] < $findate[2]){
-		$error .= "<br>El año de facturación es menor al año del periodo de facturación ";
+		$error .= "<br>El año de facturación es menor al año del periodo de facturación. ";
 		// boolean for die() creation
 		$boolean = TRUE;
 	}
 	if($factdate[1] < $indate[1] || $factdate[1] < $findate[1]){
-		$error .= "<br>El mes de facturación es menor al mes del periodo de facturación ";
+		$error .= "<br>El mes de facturación es menor al mes del periodo de facturación.";
 		// boolean for die() creation
 		$boolean = TRUE;
 	}
-	if(mktime(0,0,0,$factdate[0], $factdate[1], $factdate[2]) > mktime(0,0,0,$indate[0], $indate[1], $indate[2]) && mktime(0,0,0,$factdate[0], $factdate[1], $factdate[2]) < mktime(0,0,0,$findate[0], $findate[1], $findate[2])){
-		$error .= "<br>La fecha de facturación está dentro del periodo de facturación";	
+	if(mktime(0,0,0,$factdate[1], $factdate[0], $factdate[2]) > mktime(0,0,0,$indate[1], $indate[0], $indate[2]) && mktime(0,0,0,$factdate[1], $factdate[0], $factdate[2]) < mktime(0,0,0,$findate[1], $findate[0], $findate[2])){
+		$error .= "<br>La fecha de facturación está dentro del periodo de facturación.";	
 		$boolean = TRUE;
 	}
 	if($indate[2] != $findate[2]){
-		$error .= "<br>El año de inicio de periodo es diferente al año de fin periodo de facturación ";
+		$error .= "<br>El año de inicio de periodo es diferente al año de fin periodo de facturación. ";
 		// boolean for die() creation
 		$boolean = TRUE;
 	}
 	if($indate[1] > $findate[1]){
-		$error .= "<br>El mes de inicio de periodo es mayor al mes de fin periodo de facturación ";
+		$error .= "<br>El mes de inicio de periodo es mayor al mes de fin periodo de facturación. ";
 		// boolean for die() creation
 		$boolean = TRUE;
 	}
 	if($indate[0] > $findate[0] && $indate[2] == $findate[2] && $indate[3] == $findate[3]){
-		$error .= "<br>El día de inicio de periodo es mayor al día de fin periodo de facturación ";
+		$error .= "<br>El día de inicio de periodo es mayor al día de fin periodo de facturación. ";
 		// boolean for die() creation
 		$boolean = TRUE;
 	}

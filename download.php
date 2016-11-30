@@ -18,4 +18,7 @@ header("Content-Length:". filesize(dirname(__FILE__)."/downloads/".$_SESSION["fa
 // reading file 
 readfile(dirname(__FILE__)."/downloads/".$_SESSION["facturename"].".csv");
 
+
+
+
 die();
