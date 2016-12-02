@@ -1,6 +1,7 @@
 <?php
 // Setting time limit to 15 minutes
 set_time_limit(2100);
+header('Content-Type: text/html; charset=UTF-8');
 // Look for lib
 require_once dirname ( __FILE__ ) . '/lib/Classes/PHPExcel.php';
 require_once dirname ( __FILE__ ) . '/lib/Classes/PHPExcel/IOFactory.php';
@@ -43,6 +44,7 @@ if($_POST["dates"] == "Enviar" ) {
 	
 	// Comming back from other pages
 	unset($_SESSION ["filename"]);
+	unset($_SESSION [ "filedir"]);
 	// Showing the uploading form
 	echo neobis_file_uploader_form($_SESSION["factdate"], $_SESSION["indate"], $_SESSION["findate"], $_SESSION["provider"], $_SESSION["client"]);
 	die();
@@ -157,9 +159,8 @@ if($_POST["dates"] == "Enviar" ) {
 		$result=array();
 		if(isset($_POST['namefacture'])){
 			if(  preg_match ( "/[[:alnum:]]/", $_POST['facture'], $result )){
-				$aux=explode(" ", $_SESSION["provider"]);
 				// If there was a facture name, assign it to a session variable
-				$_SESSION['facturename']= $_SESSION["client"]."-".$aux[0].$aux[1]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
+				$_SESSION['facturename']= $_SESSION["client"]."-".$_SESSION["provider"]."-".$_SESSION["moisfacturation"]."-".$_POST['facture'];
 			}else{
 				echo "<div align = 'center'><h1>Error:</h1><br>No seleccionaste un nombre de factura </div>";
 				echo "<html><body><div align = 'center'><form method='POST'><button type='submit' name='dates' value='Enviar'>Volver</button></div></form></body></html>";
@@ -315,7 +316,6 @@ if($_POST["dates"] == "Enviar" ) {
 	die();
 }elseif($_POST["fields"]=="Siguiente"){
 	
-
 	// Checking if there are selections saved
 	if(!isset($_SESSION["selections"])){
 		$_SESSION["selections"] = $_POST;

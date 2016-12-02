@@ -322,7 +322,7 @@ function neobis_select_fields($header, $campos){
 function neobis_A2A($worksheet, $fechaUno, $fechaDos, $fecha, $cliente, $proveedor){
 	$info=array();
 	$highestCol = $worksheet->getHighestColumn();
-	var_dump($highestCol);die();
+	
 	$highestCol= array_search($highestCol, neobis_excel_letters());
 	$highestRow = $worksheet->getHighestRow();
 	for($col = 0; $col < $highestCol; $col ++) {
@@ -583,7 +583,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	mysqli_query($connection, $delete_sql);
 	// Getting fields where to insert
 	$insert_fields= neobis_insertinto_fields();
-	//var_dump($insert_fields);echo"<br>";
 	// Facture header Values
 	$header_value = neobis_insertinto_values( $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $facturename);
 	// Going through file sheets
@@ -611,6 +610,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 						}
 					}
 				}
+			
 				$sum = $sum + $file["m_total"];
 				$file=array_merge($header_value, $file);
 				$file=neobis_replacing_colon($file);
@@ -628,7 +628,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 						$sql_values .= " '".$file[$insert_field]."'";
 						$first_entry ++;	
 					}else{
-					//	$insert_fields=array_diff($insert_fields, [$insert_field]);
 						continue;
 					}
 				}
@@ -685,7 +684,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 			$table_search .= " ";
 		}
 	}
-	//var_dump($encabezados);die();
 	// Getting table to show 
 	$table_sql = "SELECT".$table_search."
 			FROM item
@@ -700,7 +698,6 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 			$table_show[] = $row;
 		}
 	}
-	//var_dump($encabezados);die();
 	
 	$count=1;
 	
