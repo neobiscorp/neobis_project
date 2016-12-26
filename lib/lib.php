@@ -583,6 +583,7 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 	mysqli_query($connection, $delete_sql);
 	// Getting fields where to insert
 	$insert_fields= neobis_insertinto_fields();
+	//INSERT FUNCTIONS BY PROVIDER HERE
 	// Facture header Values
 	$header_value = neobis_insertinto_values( $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $facturename);
 	// Going through file sheets
@@ -604,6 +605,8 @@ function neobis_print_table($client, $provider, $filedir, $header, $selections, 
 							// Hardcode for this stage
 							if($client == "Falabella" && $provider == "Adessa PC"){
 								$file[$campo] = $row[$assoc[$campo]].".AD";
+							}else{
+								$file[$campo] = $row[$assoc[$campo]];
 							}
 						}else{
 							$file[$campo] = $row[$assoc[$campo]];
@@ -991,4 +994,167 @@ function neobis_client_provider_existance($client, $provider){
 	}else{
 		return array($existance, "No hay Error");
 	}
+}
+/**
+ * Function for creating table for Walmart-HP
+ * @param unknown $client
+ * @param unknown $provider
+ * @param unknown $filedir
+ * @param unknown $header
+ * @param unknown $selections
+ * @param unknown $campos
+ * @param unknown $moisfacturation
+ * @param unknown $facturationdate
+ * @param unknown $dateone
+ * @param unknown $datetwo
+ * @param unknown $idoperateur
+ * @param unknown $nomcompte
+ * @param unknown $ceco
+ * @param unknown $codedevise
+ * @return multitype:string multitype:unknown
+ */
+function neobis_walmart_hp($client, $provider, $filedir, $header, $selections, $campos,  $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise){
+	// Creating file reader
+	$reader = ReaderFactory::create(Type::XLSX);
+	// Opening file
+	$reader->open($filedir);
+	// Facture header Values
+	$header_value = neobis_insertinto_values( $moisfacturation, $facturationdate, $dateone, $datetwo,$idoperateur, $nomcompte, $ceco, $codedevise, $facturename);
+	// Going through file sheets
+	foreach($reader->getSheetIterator() as $sheet){
+		// Setting a counter
+		$header_out=0;
+		//$count_row = 0;
+		// Going through rows from sheet
+		foreach ($sheet->getRowIterator() as $row){
+			if($header_out != 0){
+				$sql_insert = "INSERT INTO `item` (";
+				$sql_values = "VALUES (";
+				// Going through fields
+				foreach($campos as $campo){
+					// Sees if the field is set
+					if(isset($assoc[$campo])){
+						// Create new array associating field with possition on the array
+						if($campo == "libelle_charge"){
+							// Hardcode for this stage
+							if($client == "Falabella" && $provider == "Adessa PC"){
+								$file[$campo] = $row[$assoc[$campo]].".AD";
+							}
+						}else{
+							$file[$campo] = $row[$assoc[$campo]];
+						}
+					}
+				}
+					
+				$sum = $sum + $file["m_total"];
+				$file=array_merge($header_value, $file);
+				$file=neobis_replacing_colon($file);
+				$first_entry = 0;
+				foreach($insert_fields as $insert_field){
+					if(isset($file[$insert_field])){
+						if($first_entry != "0"){
+							// Inserting colon
+							$sql_insert .= ",";
+							$sql_values .= ",";
+						}
+						// Table header
+						// Inserting fields and values
+						$sql_insert .= " `".$insert_field."`";
+						$sql_values .= " '".$file[$insert_field]."'";
+						$first_entry ++;
+					}else{
+						continue;
+					}
+				}
+				// Closing parenthesis
+				$sql_insert .= ")";
+				$sql_values .= ")";
+				$insert = $sql_insert." ".$sql_values;
+				// Uploading to data base
+				mysqli_query($connection, $sql_insert." ".$sql_values);
+			}
+			$header_out=99999;
+		}
+	}
+	// Rounding
+	$sum = round($sum, 4);
+	//getting sum with IVA
+	$sum_iva = $sum *1.19;
+	$sum_iva = round($sum_iva, 4);
+	//Getting separated IVA
+	$iva = $sum_iva - $sum;
+	$iva = round($iva, 4);
+	//changing decimal with period to decimal with colon
+	$sum = explode(".", $sum);
+	$sum = implode(",", $sum);
+	$file["m_total_facture"]=$sum;
+	$sum_iva = explode(".", $sum_iva);
+	$sum_iva = implode(",", $sum_iva);
+	$file["m_total_ttc_facture"]=$sum_iva;
+	$iva = explode(".", $iva);
+	$iva = implode(",", $iva);
+	$file["m_tva"]=$iva;
+	$count=0;
+	
+	//Updating data on DB to export CSV
+	$update_sql = "UPDATE item
+			SET m_total_facture = '".$sum."', m_total_ttc_facture = '".$sum_iva."', m_tva = '".$iva."'
+			WHERE nofacture like '".$facturename."'";
+	// Query excecution
+	if(mysqli_query($connection, $update_sql)){
+		$count++;
+	}
+	// Creating table header
+	$encabezados=array();
+	$table_search = " ";
+	$colon_insert = 1;
+	foreach($file as $key=>$data){
+	
+		$encabezados[] = $key;
+		$table_search .= $key;
+		if($colon_insert!=count($file)){
+			$table_search .= ", ";
+			$colon_insert ++;
+		}else{
+			$table_search .= " ";
+		}
+	}
+	// Getting table to show
+	$table_sql = "SELECT".$table_search."
+			FROM item
+			WHERE nofacture like '".$facturename."'
+			LIMIT 10";
+	// Query excecution
+	$table = mysqli_query($connection, $table_sql);
+	$table_show = array();
+	if (mysqli_num_rows($table) > 0) {
+		// output data of each row, saving results
+		while($row = mysqli_fetch_assoc($table)) {
+			$table_show[] = $row;
+		}
+	}
+	
+	$count=1;
+	
+	// Starting table
+	$show = "<html><table border = '1' align = 'center'>";
+	$show .= "<tr>";
+	// Writing header in table
+	foreach ($encabezados as $encabezado){
+		$show .= "<td>".$encabezado."</td>";
+	}
+	$show .= "</tr>";
+	// writing content on table
+	foreach($table_show as $line){
+		$show .= "<tr>";
+		//var_dump($cell);
+		foreach($line as $cell){
+			$show .= "<td>".$cell."</td>";
+		}
+		$show .= "</tr>";
+	}
+	// Closing table
+	$show .= "</table></html>";
+	// Return table
+	return array($show, $encabezados);
 }
