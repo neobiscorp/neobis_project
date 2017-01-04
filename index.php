@@ -351,6 +351,7 @@ if($_POST["dates"] == "Enviar" ) {
 	// Setting delimiter
 	$writer->setFieldDelimiter(';');
 	// Adding information to file
+	
 	$writer->addRows($csv);
 	// Closing writer
 	$writer->close();
