@@ -368,5 +368,4 @@ if($_POST["dates"] == "Enviar" ) {
 // showing client-provider selection form
 echo neobis_select_provider_form();
 
-
 die ();
