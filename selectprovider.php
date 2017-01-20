@@ -1,10 +1,12 @@
 <?php
-
+$output = "";
 require_once dirname ( __FILE__ ) . '/lib/lib.php';
-if($_GET['noselection']){
-	echo "";
-	die();
-}
+
+//if($_GET['noselection']){
+//	echo "";
+//	die();
+//}
+
 $connection = neobis_mysql_conection();
 $clientid_sql = "SELECT id FROM clientes WHERE nombre LIKE '".$_GET['q']."'";
 $result = mysqli_query($connection, $clientid_sql);
